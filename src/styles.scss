@@ -1,0 +1,154 @@
+@use '@angular/material' as mat;
+
+// ── Paleta corporativa ────────────────────────────────────────────────────────
+$primary-palette: mat.m2-define-palette(mat.$m2-indigo-palette, 900, 300, 700);
+$accent-palette:  mat.m2-define-palette(mat.$m2-blue-palette, 600, 300, 800);
+$warn-palette:    mat.m2-define-palette(mat.$m2-red-palette);
+
+$app-theme: mat.m2-define-light-theme((
+  color: (
+    primary: $primary-palette,
+    accent:  $accent-palette,
+    warn:    $warn-palette,
+  ),
+  typography: mat.m2-define-typography-config(
+    $font-family: 'Roboto, sans-serif',
+  ),
+  density: 0,
+));
+
+@include mat.all-component-themes($app-theme);
+
+// ── Variables CSS globales ────────────────────────────────────────────────────
+:root {
+  --color-primary:       #1E3A5F;
+  --color-primary-light: #378ADD;
+  --color-primary-bg:    #E6F1FB;
+  --color-success:       #1D9E75;
+  --color-success-bg:    #EAF3DE;
+  --color-success-text:  #3B6D11;
+  --color-warning:       #BA7517;
+  --color-warning-bg:    #FAEEDA;
+  --color-warning-text:  #854F0B;
+  --color-danger:        #E24B4A;
+  --color-danger-bg:     #FCEBEB;
+  --color-danger-text:   #A32D2D;
+  --color-purple:        #534AB7;
+  --color-purple-bg:     #EEEDFE;
+  --color-neutral-50:    #F4F6F9;
+  --color-neutral-100:   #EEF1F5;
+  --color-neutral-300:   #D0D8E4;
+  --color-neutral-500:   #9BA8B5;
+  --color-neutral-700:   #5F6B7A;
+  --color-neutral-900:   #1E2A38;
+  --radius-sm:  4px;
+  --radius-md:  8px;
+  --radius-lg:  12px;
+}
+
+// ── Reset y base ──────────────────────────────────────────────────────────────
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: Roboto, sans-serif;
+  background: var(--color-neutral-50);
+  color: var(--color-neutral-900);
+}
+
+// ── Utilidades globales ───────────────────────────────────────────────────────
+.page-container {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  h2 { margin: 0; color: var(--color-primary); }
+  .subtitle { font-size: 13px; color: var(--color-neutral-700); margin: 2px 0 0; }
+}
+
+.card {
+  background: #fff;
+  border-radius: var(--radius-lg);
+  border: 0.5px solid var(--color-neutral-300);
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.section-title {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-neutral-700);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  padding-bottom: 10px;
+  border-bottom: 0.5px solid var(--color-neutral-100);
+  margin-bottom: 16px;
+}
+
+.field-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  &.cols-1 { grid-template-columns: 1fr; }
+  &.cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .full    { grid-column: 1 / -1; }
+}
+
+// ── Badges ────────────────────────────────────────────────────────────────────
+.badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 10px;
+  border-radius: 10px;
+  white-space: nowrap;
+
+  &--primary { background: var(--color-primary-bg);  color: var(--color-primary); }
+  &--success { background: var(--color-success-bg);  color: var(--color-success-text); }
+  &--warning { background: var(--color-warning-bg);  color: var(--color-warning-text); }
+  &--danger  { background: var(--color-danger-bg);   color: var(--color-danger-text); }
+  &--purple  { background: var(--color-purple-bg);   color: var(--color-purple); }
+  &--neutral { background: var(--color-neutral-100); color: var(--color-neutral-700); }
+}
+
+// ── Progress bar ─────────────────────────────────────────────────────────────
+.progress-bar {
+  height: 4px;
+  background: var(--color-neutral-300);
+  border-radius: 2px;
+  overflow: hidden;
+  .fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width .3s;
+    &.success { background: var(--color-success); }
+    &.warning { background: var(--color-warning); }
+    &.danger  { background: var(--color-danger); }
+    &.info    { background: var(--color-primary-light); }
+  }
+}
+
+// ── Material overrides ────────────────────────────────────────────────────────
+.mat-mdc-form-field { width: 100%; }
+
+.mat-mdc-card {
+  border-radius: var(--radius-lg) !important;
+  border: 0.5px solid var(--color-neutral-300) !important;
+  box-shadow: none !important;
+}
+
+.mat-mdc-snack-bar-container {
+  &.snack-success .mdc-snackbar__surface { background: var(--color-success); }
+  &.snack-error   .mdc-snackbar__surface { background: var(--color-danger); }
+  &.snack-warn    .mdc-snackbar__surface { background: var(--color-warning); }
+}
