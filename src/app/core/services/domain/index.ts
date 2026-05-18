@@ -17,7 +17,7 @@ import {
 @Injectable({ providedIn: 'root' })
 export class RolesAppService {
   private sp = inject(SharepointBaseService);
-  private S = ['Id','Rol','Activo','Usuario/Id','Usuario/Title','Usuario/EMail'];
+  private S = ['Id', 'Rol', 'Activo', 'Usuario/Id', 'Usuario/Title', 'Usuario/EMail'];
   private E = ['Usuario'];
 
   getAll(): Observable<RolAppItem[]> {
@@ -41,7 +41,7 @@ export class RolesAppService {
 @Injectable({ providedIn: 'root' })
 export class AprobadoresService {
   private sp = inject(SharepointBaseService);
-  private S = ['Id','Cargo','Orden','Activo','Persona/Id','Persona/Title','Persona/EMail'];
+  private S = ['Id', 'Cargo', 'Orden', 'Activo', 'Persona/Id', 'Persona/Title', 'Persona/EMail'];
   private E = ['Persona'];
 
   getAll(): Observable<AprobadorItem[]> {
@@ -70,7 +70,7 @@ export class AreasService {
   private sp = inject(SharepointBaseService);
 
   getAll(): Observable<AreaItem[]> {
-    return this.sp.getAll<AreaItem>(SP_LISTS.AREAS, { select: ['Id','Title','Descripcion'], orderBy: 'Title' });
+    return this.sp.getAll<AreaItem>(SP_LISTS.AREAS, { select: ['Id', 'Title', 'Descripcion'], orderBy: 'Title' });
   }
   create(data: AreaCreate): Observable<any> {
     return this.sp.create(SP_LISTS.AREAS, { Title: data.Title, Descripcion: data.Descripcion });
@@ -87,7 +87,7 @@ export class AreasService {
 @Injectable({ providedIn: 'root' })
 export class PerfilesCargosService {
   private sp = inject(SharepointBaseService);
-  private S = ['Id','Cargo','ExperienciaMinima','ComptenciasRequeridas','FormacionConocimiento'];
+  private S = ['Id', 'Cargo', 'ExperienciaMinima', 'ComptenciasRequeridas', 'FormacionConocimiento'];
 
   getAll(): Observable<PerfilCargoItem[]> {
     return this.sp.getAll<PerfilCargoItem>(SP_LISTS.PERFILES_CARGOS, { select: this.S, orderBy: 'Cargo' });
@@ -111,17 +111,24 @@ export class PerfilesCargosService {
 export class SolicitudesService {
   private sp = inject(SharepointBaseService);
   private S = [
-    'Id','Perfil_Solicitado','Fecha_Solicitud','FechaRequeridaInicio',
-    'PruebaExcel','MotivoVacante','Estado_Aprobacion',
-    'Aprobado_Lider','Aprobado_DirAdm','Aprobado_Gerente',
-    'Fecha_Aprobacion','Observaciones',
-    'Solicitante/Id','Solicitante/Title','Solicitante/EMail',
-    'AreaSolicitante/Id','AreaSolicitante/Title',
+    'Id',
+    'Pefil_solicitado/Id',       // antes era 'Pefil_solicitado'
+    'Pefil_solicitado/Cargo',    // campo título de PerfilesCargos
+    'Created', 'FechaRequeridaInicio',
+    'PruebaExcel', 'MotivoVacante', 'Estado_Aprobacion',
+    'Aprobado_Lider', 'Aprobado_DirAdm', 'Aprobado_Gerente',
+    'Fecha_Aprobacion', 'Observaciones',
+    'Solicitante/Id', 'Solicitante/Title', 'Solicitante/EMail',
+    'AreaSolicitante/Id', 'AreaSolicitante/Title',
   ];
-  private E = ['Solicitante','AreaSolicitante'];
+  private E = [
+    'Solicitante',
+    'AreaSolicitante',
+    'Pefil_solicitado',          // agregar al expand
+  ];
 
   getAll(): Observable<SolicitudItem[]> {
-    return this.sp.getAll<SolicitudItem>(SP_LISTS.SOLICITUDES, { select: this.S, expand: this.E, orderBy: 'Fecha_Solicitud', ascending: false });
+    return this.sp.getAll<SolicitudItem>(SP_LISTS.SOLICITUDES, { select: this.S, expand: this.E, orderBy: 'Created', ascending: false });
   }
   getById(id: number): Observable<SolicitudItem> {
     return this.sp.getById<SolicitudItem>(SP_LISTS.SOLICITUDES, id, { select: this.S, expand: this.E });
@@ -135,7 +142,11 @@ export class SolicitudesService {
   }
   create(data: SolicitudCreate): Observable<any> {
     return this.sp.create(SP_LISTS.SOLICITUDES, {
-      ...data,
+      Pefil_solicitadoId: data.Pefil_solicitadoId,  // antes Perfil_solicitado: string
+      AreaSolicitanteId: data.AreaSolicitanteId,
+      FechaRequeridaInicio: data.FechaRequeridaInicio,
+      PruebaExcel: data.PruebaExcel,
+      MotivoVacante: data.MotivoVacante,
       Estado_Aprobacion: 'Pendiente',
       Aprobado_Lider: false,
       Aprobado_DirAdm: false,
@@ -155,9 +166,9 @@ export class SolicitudesService {
 export class CandidatosService {
   private sp = inject(SharepointBaseService);
   private S = [
-    'Id','Nombre_Completo','Correo','Telefono','Estado',
-    'Fecha_Ingreso','CV_URL','Examenes_OK','Notas_Analista',
-    'ID_Solicitud/Id','ID_Solicitud/Title',
+    'Id', 'Nombre_Completo', 'Correo', 'Telefono', 'Estado',
+    'Fecha_Ingreso', 'CV_URL', 'Examenes_OK', 'Notas_Analista',
+    'ID_Solicitud/Id', 'ID_Solicitud/Title',
   ];
   private E = ['ID_Solicitud'];
 
@@ -195,9 +206,9 @@ export class CandidatosService {
 export class OfertasService {
   private sp = inject(SharepointBaseService);
   private S = [
-    'Id','Salario_Ofertado','Cargo','PDF_Oferta_URL',
-    'Estado_Oferta','Aprobada_DirAdm','Fecha_Envio','Fecha_Respuesta','IP_Aceptacion',
-    'ID_Candidato/Id','ID_Candidato/Title',
+    'Id', 'Salario_Ofertado', 'Cargo', 'PDF_Oferta_URL',
+    'Estado_Oferta', 'Aprobada_DirAdm', 'Fecha_Envio', 'Fecha_Respuesta', 'IP_Aceptacion',
+    'ID_Candidato/Id', 'ID_Candidato/Title',
   ];
   private E = ['ID_Candidato'];
 
@@ -223,9 +234,9 @@ export class OfertasService {
 export class ContratosService {
   private sp = inject(SharepointBaseService);
   private S = [
-    'Id','DocuSign_EnvelopeID','Estado_Firma',
-    'Fecha_Envio_DocuSign','Fecha_Firma_Aspirante','Fecha_Firma_RepLegal',
-    'PDF_Firmado_URL','Certificado_Auditoria','Archivado',
+    'Id', 'DocuSign_EnvelopeID', 'Estado_Firma',
+    'Fecha_Envio_DocuSign', 'Fecha_Firma_Aspirante', 'Fecha_Firma_RepLegal',
+    'PDF_Firmado_URL', 'Certificado_Auditoria', 'Archivado',
     'ID_Oferta/Id',
   ];
   private E = ['ID_Oferta'];

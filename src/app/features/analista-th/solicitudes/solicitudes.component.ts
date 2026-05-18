@@ -57,7 +57,7 @@ import { SolicitudItem, EstadoAprobacion } from '../../../shared/models';
             <div class="sol-card-header">
               <div>
                 <div class="sol-id">SOL-{{ s.Id }}</div>
-                <div class="sol-nombre">{{ s.Perfil_Solicitado }}</div>
+                <div class="sol-nombre">{{ s.Pefil_solicitado?.Cargo }}</div>
                 <div class="sol-meta">
                   {{ s.Solicitante?.Title }} · {{ s.AreaSolicitante?.Title }} ·
                   <span class="badge badge--neutral">{{ s.MotivoVacante }}</span>
@@ -67,7 +67,7 @@ import { SolicitudItem, EstadoAprobacion } from '../../../shared/models';
                 <span [class]="'badge badge--' + badgeEstado(s.Estado_Aprobacion)">
                   {{ s.Estado_Aprobacion }}
                 </span>
-                <div class="sol-fecha">{{ s.Fecha_Solicitud | date:'dd/MM/yyyy' }}</div>
+                <div class="sol-fecha">{{ s.Created | date:'dd/MM/yyyy' }}</div>
               </div>
             </div>
 
@@ -159,7 +159,7 @@ export class SolicitudesComponent implements OnInit {
     const estado = this.filtroEstado as EstadoAprobacion | '';
     return this.solicitudes().filter(s => {
       const coincideTexto = !texto ||
-        s.Perfil_Solicitado.toLowerCase().includes(texto) ||
+        s.Pefil_solicitado?.Cargo?.toLowerCase().includes(texto) ||
         s.Solicitante?.Title?.toLowerCase().includes(texto);
       const coincideEstado = !estado || s.Estado_Aprobacion === estado;
       return coincideTexto && coincideEstado;

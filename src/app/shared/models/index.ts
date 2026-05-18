@@ -10,6 +10,12 @@ export interface SpLookup {
   Title?: string;
 }
 
+// Lookup específico para PerfilesCargos — su campo título es 'Cargo'
+export interface SpLookupPerfil {
+  Id: number;
+  Cargo?: string;
+}
+
 // ── Roles_App ─────────────────────────────────────────────────────────────────
 export type RolApp = 'AnalistaTH' | 'LiderArea' | 'Administrador';
 
@@ -88,12 +94,13 @@ export type MotivoVacante    =
 
 export interface SolicitudItem {
   Id: number;
-  Perfil_Solicitado: string;
+  Pefil_solicitado: SpLookupPerfil;      // objeto lookup
+  Pefil_solicitadoId: number;  
   Solicitante: SpPersona;
   SolicitanteId: number;
   AreaSolicitante: SpLookup;
   AreaSolicitanteId: number;
-  Fecha_Solicitud: string;
+  Created: string;
   FechaRequeridaInicio: string;
   PruebaExcel: NivelExcel;
   MotivoVacante: MotivoVacante;
@@ -106,7 +113,7 @@ export interface SolicitudItem {
 }
 
 export interface SolicitudCreate {
-  Perfil_Solicitado: string;
+  Pefil_solicitadoId: number; 
   AreaSolicitanteId: number;
   FechaRequeridaInicio: string;
   PruebaExcel: NivelExcel;

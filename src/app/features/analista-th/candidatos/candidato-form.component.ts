@@ -56,7 +56,7 @@ import { SolicitudItem } from '../../../shared/models';
               <mat-label>Solicitud aprobada *</mat-label>
               <mat-select formControlName="solicitudId">
                 @for (s of solicitudes(); track s.Id) {
-                  <mat-option [value]="s.Id">SOL-{{ s.Id }} · {{ s.Perfil_Solicitado }}</mat-option>
+                  <mat-option [value]="s.Id">SOL-{{ s.Id }} · {{ s.Pefil_solicitado?.Cargo }}</mat-option>
                 }
               </mat-select>
               <mat-hint>Solo se muestran solicitudes aprobadas</mat-hint>
