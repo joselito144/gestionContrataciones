@@ -10,22 +10,12 @@ export const LIDER_ROUTES: Routes = [
       {
         path: 'solicitudes',
         loadComponent: () =>
-          import('./solicitudes/lider-solicitudes.component').then(m => m.LiderSolicitudesComponent),
+          import('./solicitudes/lider-solicitudes.component').then(m => m.LiderSolicitudFormComponent),
       },
       {
         path: 'solicitudes/nueva',
         loadComponent: () =>
           import('./solicitudes-form/lider-solicitud-form.component').then(m => m.LiderSolicitudFormComponent),
-      },
-      {
-        path: 'solicitudes/:id/oferta',
-        loadComponent: () =>
-          import('./carta-oferta/carta-oferta-form.component').then(m => m.CartaOfertaFormComponent),
-      },
-      {
-        path: 'seguimiento',
-        loadComponent: () =>
-          import('./seguimiento/lider-seguimiento.component').then(m => m.LiderSeguimientoComponent),
       },
     ],
   },

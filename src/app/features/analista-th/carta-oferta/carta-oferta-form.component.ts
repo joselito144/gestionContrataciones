@@ -21,7 +21,7 @@ import { NotificacionService } from '../../../core/services/notificacion.service
 import { CandidatoItem, SolicitudItem } from '../../../shared/models';
 
 @Component({
-  selector: 'app-carta-oferta-form',
+  selector: 'app-analista-carta-oferta-form',
   standalone: true,
   imports: [
     CommonModule, ReactiveFormsModule,
@@ -40,7 +40,7 @@ import { CandidatoItem, SolicitudItem } from '../../../shared/models';
             <h2>Nueva carta oferta</h2>
             @if (solicitud()) {
               <p class="subtitle">
-                {{ solicitud()?.Pefil_solicitado?.Cargo }} ·
+                {{ solicitud()?.Perfil_Solicitado?.Cargo }} ·
                 {{ solicitud()?.AreaSolicitante?.Title }}
               </p>
             }
@@ -58,7 +58,7 @@ import { CandidatoItem, SolicitudItem } from '../../../shared/models';
           <div class="resumen-grid">
             <div class="resumen-item">
               <span class="resumen-lbl">Perfil solicitado</span>
-              <span class="resumen-val">{{ solicitud()?.Pefil_solicitado?.Cargo }}</span>
+              <span class="resumen-val">{{ solicitud()?.Perfil_Solicitado?.Cargo }}</span>
             </div>
             <div class="resumen-item">
               <span class="resumen-lbl">Área</span>

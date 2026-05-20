@@ -10,10 +10,17 @@ export interface SpLookup {
   Title?: string;
 }
 
-// Lookup específico para PerfilesCargos — su campo título es 'Cargo'
+// Lookup específico para PerfilesCargos (campo título = Cargo)
 export interface SpLookupPerfil {
   Id: number;
   Cargo?: string;
+}
+
+// Lookup específico para CentroCostos
+export interface CentroCostoItem {
+  Id: number;
+  Title: string;           // código, ej: "100419"
+  NombreCentroCostos: string; // descripción
 }
 
 // ── Roles_App ─────────────────────────────────────────────────────────────────
@@ -91,19 +98,43 @@ export type MotivoVacante    =
   | 'Renuncia'
   | 'Terminación Contrato'
   | 'Adición para Obra';
+export type TipoContrato =
+  | 'Término Indefinido'
+  | 'Término Fijo'
+  | 'Obra o Labor'
+  | 'Prestación Servicios'
+  | 'Aprendizaje';
+export type UnidadDuracion = 'Días' | 'Meses' | 'Años';
 
 export interface SolicitudItem {
   Id: number;
-  Pefil_solicitado: SpLookupPerfil;      // objeto lookup
-  Pefil_solicitadoId: number;  
+  // Perfil solicitado — lookup a PerfilesCargos
+  Perfil_Solicitado: SpLookupPerfil;
+  Perfil_SolicitadoId: number;
+  // Solicitante
   Solicitante: SpPersona;
   SolicitanteId: number;
+  // Área y centro de costos
   AreaSolicitante: SpLookup;
   AreaSolicitanteId: number;
-  Created: string;
+  CentroCosto: SpLookup;
+  CentroCostoId: number;
+  // Fechas
+  Fecha_Solicitud: string;
   FechaRequeridaInicio: string;
+  // Campos de perfil
   PruebaExcel: NivelExcel;
   MotivoVacante: MotivoVacante;
+  JefeInmediato: string;
+  RangoSalario: string;
+  ElementosNecesarios: string;
+  TrabajoAlturasVigente: boolean;
+  // Contrato
+  TipoContrato: TipoContrato;
+  DuracionContrato: number;
+  UnidadDuracionContrato: UnidadDuracion;
+  DefinicionObjetoObra: string;
+  // Aprobación
   Estado_Aprobacion: EstadoAprobacion;
   Aprobado_Lider: boolean;
   Aprobado_DirAdm: boolean;
@@ -113,11 +144,20 @@ export interface SolicitudItem {
 }
 
 export interface SolicitudCreate {
-  Pefil_solicitadoId: number; 
+  Perfil_SolicitadoId: number;
   AreaSolicitanteId: number;
+  CentroCostoId: number;
   FechaRequeridaInicio: string;
   PruebaExcel: NivelExcel;
   MotivoVacante: MotivoVacante;
+  JefeInmediato: string;
+  RangoSalario: string;
+  ElementosNecesarios: string;
+  TrabajoAlturasVigente: boolean;
+  TipoContrato: TipoContrato;
+  DuracionContrato: number;
+  UnidadDuracionContrato: UnidadDuracion;
+  DefinicionObjetoObra: string;
 }
 
 // ── Candidatos ────────────────────────────────────────────────────────────────

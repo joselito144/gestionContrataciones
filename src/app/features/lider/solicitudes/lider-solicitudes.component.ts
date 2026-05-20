@@ -1,213 +1,484 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { SolicitudesService, CandidatosService } from '../../../core/services/domain';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatStepperModule } from '@angular/material/stepper';
+import { forkJoin } from 'rxjs';
+import {
+  SolicitudesService,
+  AreasService,
+  PerfilesCargosService,
+  CentroCostosService,
+} from '../../../core/services/domain';
 import { NotificacionService } from '../../../core/services/notificacion.service';
-import { SolicitudItem, EstadoAprobacion } from '../../../shared/models';
-
-interface SolicitudConCandidatos extends SolicitudItem {
-  totalCandidatos: number;
-  seleccionados: number;
-}
+import { AuthService } from '../../../core/services/auth.service';
+import {
+  AreaItem, PerfilCargoItem, CentroCostoItem,
+  NivelExcel, MotivoVacante, TipoContrato, UnidadDuracion,
+} from '../../../shared/models';
 
 @Component({
-  selector: 'app-lider-solicitudes',
+  selector: 'app-lider-solicitud-form',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule],
+  imports: [
+    CommonModule, ReactiveFormsModule,
+    MatFormFieldModule, MatInputModule, MatSelectModule,
+    MatAutocompleteModule, MatButtonModule, MatIconModule,
+    MatProgressSpinnerModule, MatDatepickerModule, MatNativeDateModule,
+    MatSlideToggleModule, MatDividerModule, MatStepperModule,
+  ],
   template: `
     <div class="page-container">
       <div class="page-header">
-        <div>
-          <h2>Mis solicitudes</h2>
-          <p class="subtitle">Solicitudes de personal registradas por ti</p>
+        <div style="display:flex;align-items:center;gap:12px">
+          <button mat-icon-button (click)="volver()">
+            <mat-icon>arrow_back</mat-icon>
+          </button>
+          <div>
+            <h2>Nueva solicitud de personal</h2>
+            <p class="subtitle">Formato GH-F-012 · Campos con * son obligatorios</p>
+          </div>
         </div>
-        <button mat-flat-button color="primary" (click)="nueva()">
-          <mat-icon>add</mat-icon> Nueva solicitud
-        </button>
       </div>
 
       @if (cargando()) {
         <div class="loading-center"><mat-spinner diameter="40" /></div>
       } @else {
-        @for (s of solicitudes(); track s.Id) {
-          <div class="sol-card card">
-            <div class="sol-header">
-              <div>
-                <div class="sol-id">SOL-{{ s.Id }}</div>
-                <div class="sol-nombre">{{ s.Pefil_solicitado?.Cargo }}</div>
-                <div class="sol-meta">
-                  {{ s.AreaSolicitante?.Title }} · {{ s.MotivoVacante }} ·
-                  Inicio requerido: {{ s.FechaRequeridaInicio | date:'dd/MM/yyyy' }}
-                </div>
+        <form [formGroup]="form" (ngSubmit)="guardar()">
+
+          <!-- SECCIÓN 1: Identificación -->
+          <div class="card">
+            <p class="section-title">1. Identificación del requerimiento</p>
+            <div class="field-grid">
+
+              <!-- Perfil solicitado -->
+              <mat-form-field appearance="outline">
+                <mat-label>Perfil / cargo solicitado *</mat-label>
+                <mat-select formControlName="perfilId">
+                  @for (p of perfiles(); track p.Id) {
+                    <mat-option [value]="p.Id">{{ p.Cargo }}</mat-option>
+                  }
+                </mat-select>
+                @if (form.get('perfilId')?.hasError('required') && form.get('perfilId')?.touched) {
+                  <mat-error>El perfil es requerido</mat-error>
+                }
+              </mat-form-field>
+
+              <!-- Área — autocomplete -->
+              <mat-form-field appearance="outline">
+                <mat-label>Área solicitante *</mat-label>
+                <input matInput formControlName="areaBusqueda"
+                  [matAutocomplete]="autoArea"
+                  placeholder="Escribe para buscar..." />
+                <mat-autocomplete #autoArea="matAutocomplete"
+                  [displayWith]="displayArea"
+                  (optionSelected)="onAreaSelected($event.option.value)">
+                  @for (a of areasFiltradas(); track a.Id) {
+                    <mat-option [value]="a">
+                      {{ a.Title }}
+                    </mat-option>
+                  }
+                </mat-autocomplete>
+                @if (form.get('areaId')?.hasError('required') && form.get('areaBusqueda')?.touched) {
+                  <mat-error>El área es requerida</mat-error>
+                }
+              </mat-form-field>
+
+              <!-- Centro de costos — autocomplete por código o descripción -->
+              <mat-form-field appearance="outline">
+                <mat-label>Centro de costos *</mat-label>
+                <input matInput formControlName="centroBusqueda"
+                  [matAutocomplete]="autoCentro"
+                  placeholder="Buscar por código o nombre..." />
+                <mat-autocomplete #autoCentro="matAutocomplete"
+                  [displayWith]="displayCentro"
+                  (optionSelected)="onCentroSelected($event.option.value)">
+                  @for (c of centrosFiltrados(); track c.Id) {
+                    <mat-option [value]="c">
+                      <span class="centro-codigo">{{ c.Title }}</span>
+                      <span class="centro-nombre"> — {{ c.NombreCentroCostos }}</span>
+                    </mat-option>
+                  }
+                </mat-autocomplete>
+                @if (form.get('centroCostoId')?.hasError('required') && form.get('centroBusqueda')?.touched) {
+                  <mat-error>El centro de costos es requerido</mat-error>
+                }
+              </mat-form-field>
+
+              <!-- Motivo vacante -->
+              <mat-form-field appearance="outline">
+                <mat-label>Motivo de la vacante *</mat-label>
+                <mat-select formControlName="motivoVacante">
+                  @for (m of motivosVacante; track m) {
+                    <mat-option [value]="m">{{ m }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+
+              <!-- Fecha requerida -->
+              <mat-form-field appearance="outline">
+                <mat-label>Fecha requerida de inicio *</mat-label>
+                <input matInput [matDatepicker]="picker"
+                  formControlName="fechaRequeridaInicio"
+                  [min]="fechaMinima" />
+                <mat-datepicker-toggle matIconSuffix [for]="picker" />
+                <mat-datepicker #picker />
+              </mat-form-field>
+
+              <!-- Jefe inmediato -->
+              <mat-form-field appearance="outline">
+                <mat-label>Jefe inmediato *</mat-label>
+                <input matInput formControlName="jefeInmediato"
+                  placeholder="Nombre del jefe inmediato" />
+              </mat-form-field>
+
+            </div>
+          </div>
+
+          <!-- SECCIÓN 2: Condiciones del cargo -->
+          <div class="card">
+            <p class="section-title">2. Condiciones del cargo</p>
+            <div class="field-grid">
+
+              <!-- Rango salarial -->
+              <mat-form-field appearance="outline">
+                <mat-label>Rango salarial (COP) *</mat-label>
+                <input matInput formControlName="rangoSalario"
+                  placeholder="Ej: 2000000" />
+                <span matPrefix>$&nbsp;</span>
+              </mat-form-field>
+
+              <!-- Prueba Excel -->
+              <mat-form-field appearance="outline">
+                <mat-label>Nivel de Excel requerido</mat-label>
+                <mat-select formControlName="pruebaExcel">
+                  @for (n of nivelesExcel; track n) {
+                    <mat-option [value]="n">{{ n }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+
+              <!-- Trabajo en alturas -->
+              <div class="toggle-field">
+                <label>¿Requiere trabajo en alturas vigente?</label>
+                <mat-slide-toggle formControlName="trabajoAlturas" color="primary">
+                  {{ form.get('trabajoAlturas')?.value ? 'Sí requerido' : 'No requerido' }}
+                </mat-slide-toggle>
               </div>
-              <div class="sol-right">
-                <span [class]="'badge badge--' + badgeEstado(s.Estado_Aprobacion)">
-                  {{ s.Estado_Aprobacion }}
-                </span>
-                <div class="sol-stats">
-                  <div class="stat">
-                    <div class="stat-val">{{ s.totalCandidatos }}</div>
-                    <div class="stat-lbl">Candidatos</div>
-                  </div>
-                  <div class="stat" [class.stat-success]="s.seleccionados > 0">
-                    <div class="stat-val">{{ s.seleccionados }}</div>
-                    <div class="stat-lbl">Seleccionados</div>
-                  </div>
-                </div>
+
+              <!-- Elementos necesarios -->
+              <mat-form-field appearance="outline" class="full">
+                <mat-label>Elementos necesarios para la contratación</mat-label>
+                <textarea matInput formControlName="elementosNecesarios"
+                  rows="2"
+                  placeholder="EPP, equipos, herramientas, dotación...">
+                </textarea>
+              </mat-form-field>
+
+            </div>
+          </div>
+
+          <!-- SECCIÓN 3: Tipo de contrato -->
+          <div class="card">
+            <p class="section-title">3. Tipo de contrato</p>
+            <div class="field-grid">
+
+              <mat-form-field appearance="outline">
+                <mat-label>Tipo de contrato *</mat-label>
+                <mat-select formControlName="tipoContrato">
+                  @for (t of tiposContrato; track t) {
+                    <mat-option [value]="t">{{ t }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Duración *</mat-label>
+                <input matInput type="number" formControlName="duracionContrato" min="1" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Unidad de duración *</mat-label>
+                <mat-select formControlName="unidadDuracion">
+                  @for (u of unidadesDuracion; track u) {
+                    <mat-option [value]="u">{{ u }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+
+              <!-- Objeto/obra — visible solo para Obra o Labor y Prestación Servicios -->
+              @if (mostrarObjetoObra()) {
+                <mat-form-field appearance="outline" class="full">
+                  <mat-label>Definición del objeto / obra *</mat-label>
+                  <textarea matInput formControlName="definicionObjetoObra"
+                    rows="3"
+                    placeholder="Describe el objeto o la obra contratada...">
+                  </textarea>
+                </mat-form-field>
+              }
+
+            </div>
+          </div>
+
+          <!-- SECCIÓN 4: Solicitante -->
+          <div class="card">
+            <p class="section-title">4. Solicitante</p>
+            <div class="solicitante-row">
+              <div class="avatar">{{ auth.iniciales() }}</div>
+              <div>
+                <div class="user-name">{{ auth.usuario()?.nombre }}</div>
+                <div class="user-email">{{ auth.usuario()?.email }}</div>
+                <div class="user-hint">Registrado automáticamente con tu usuario actual</div>
               </div>
             </div>
+          </div>
 
-            <!-- Barra de progreso aprobación -->
+          <!-- SECCIÓN 5: Cadena de aprobación -->
+          <div class="card">
+            <p class="section-title">5. Cadena de aprobación (automática)</p>
             <div class="aprov-chain">
-              <div class="aprov-node" [class.done]="s.Aprobado_Lider">
-                <div class="aprov-circle">
-                  <mat-icon>{{ s.Aprobado_Lider ? 'check' : 'schedule' }}</mat-icon>
-                </div>
-                <span>Líder</span>
+              <div class="aprov-step">
+                <div class="aprov-circle">1</div>
+                <span>Líder del proceso</span>
               </div>
-              <div class="aprov-arrow">›</div>
-              <div class="aprov-node"
-                [class.done]="s.Aprobado_DirAdm"
-                [class.active]="s.Aprobado_Lider && !s.Aprobado_DirAdm && s.Estado_Aprobacion !== 'Rechazado'">
-                <div class="aprov-circle">
-                  <mat-icon>{{ s.Aprobado_DirAdm ? 'check' : 'schedule' }}</mat-icon>
-                </div>
-                <span>Dir. Adm</span>
+              <mat-icon class="aprov-arrow">arrow_forward</mat-icon>
+              <div class="aprov-step">
+                <div class="aprov-circle">2</div>
+                <span>Director Administrativo</span>
               </div>
-              <div class="aprov-arrow">›</div>
-              <div class="aprov-node"
-                [class.done]="s.Aprobado_Gerente"
-                [class.active]="s.Aprobado_DirAdm && !s.Aprobado_Gerente && s.Estado_Aprobacion !== 'Rechazado'">
-                <div class="aprov-circle">
-                  <mat-icon>{{ s.Aprobado_Gerente ? 'check' : 'schedule' }}</mat-icon>
-                </div>
+              <mat-icon class="aprov-arrow">arrow_forward</mat-icon>
+              <div class="aprov-step">
+                <div class="aprov-circle">3</div>
                 <span>Gerente</span>
               </div>
-
-              <!-- Botón carta oferta solo si está aprobada y tiene seleccionados -->
-              @if (s.Estado_Aprobacion === 'Aprobado' && s.seleccionados > 0) {
-                <div style="margin-left:auto">
-                  <button mat-flat-button color="primary" (click)="generarOferta(s)">
-                    <mat-icon>description</mat-icon> Generar carta oferta
-                  </button>
+              <mat-icon class="aprov-arrow">arrow_forward</mat-icon>
+              <div class="aprov-step aprov-step--pa">
+                <div class="aprov-circle aprov-circle--pa">
+                  <mat-icon style="font-size:14px;width:14px;height:14px">auto_mode</mat-icon>
                 </div>
-              } @else if (s.Estado_Aprobacion === 'Aprobado' && s.seleccionados === 0) {
-                <div style="margin-left:auto">
-                  <span class="badge badge--warning">Esperando candidatos seleccionados</span>
-                </div>
-              }
-            </div>
-
-            <div class="progress-bar" style="margin-top:10px">
-              <div
-                class="fill"
-                [class]="claseBarra(s)"
-                [style.width.%]="(progreso(s) / 3) * 100">
+                <span>Notifica Analista TH</span>
               </div>
             </div>
+            <p class="aprov-hint">
+              Al guardar, Power Automate inicia automáticamente el flujo de aprobación.
+            </p>
           </div>
-        }
 
-        @if (solicitudes().length === 0) {
-          <div class="empty-state">
-            <mat-icon>assignment</mat-icon>
-            <p>No tienes solicitudes registradas aún</p>
-            <button mat-flat-button color="primary" (click)="nueva()">
-              Crear primera solicitud
+          <!-- Acciones -->
+          <div class="form-actions">
+            <button mat-button type="button" (click)="volver()">Cancelar</button>
+            <button mat-flat-button color="primary" type="submit"
+              [disabled]="form.invalid || guardando()">
+              @if (guardando()) {
+                <mat-spinner diameter="18" />
+              } @else {
+                <mat-icon>send</mat-icon> Enviar solicitud
+              }
             </button>
           </div>
-        }
+
+        </form>
       }
     </div>
   `,
   styles: [`
     .loading-center { display: flex; justify-content: center; padding: 48px; }
 
-    .sol-card { margin-bottom: 12px; }
-    .sol-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
-    .sol-id     { font-size: 11px; color: #9BA8B5; }
-    .sol-nombre { font-size: 15px; font-weight: 500; color: #1E3A5F; margin: 2px 0; }
-    .sol-meta   { font-size: 12px; color: #9BA8B5; }
-    .sol-right  { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
-    .sol-stats  { display: flex; gap: 8px; }
-    .stat { text-align: center; padding: 6px 12px; background: #F4F6F9; border-radius: 8px; }
-    .stat-val { font-size: 18px; font-weight: 500; color: #1E3A5F; }
-    .stat-lbl { font-size: 10px; color: #9BA8B5; }
-    .stat-success .stat-val { color: #3B6D11; }
+    .toggle-field {
+      display: flex; flex-direction: column; gap: 8px;
+      justify-content: center; padding: 8px 0;
+    }
+    .toggle-field label { font-size: 12px; color: #5F6B7A; font-weight: 500; }
 
-    .aprov-chain { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-    .aprov-node  { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    .centro-codigo { font-weight: 500; color: #1E3A5F; }
+    .centro-nombre { color: #9BA8B5; font-size: 12px; }
+
+    .solicitante-row { display: flex; align-items: flex-start; gap: 12px; }
+    .avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: #1E3A5F; display: flex; align-items: center;
+      justify-content: center; font-size: 14px; font-weight: 500; color: #fff; flex-shrink: 0;
+    }
+    .user-name  { font-size: 13px; font-weight: 500; color: #1E3A5F; }
+    .user-email { font-size: 12px; color: #9BA8B5; }
+    .user-hint  { font-size: 11px; color: #B5D4F4; margin-top: 2px; }
+
+    .aprov-chain { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+    .aprov-step  { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .aprov-step span { font-size: 10px; color: #9BA8B5; white-space: nowrap; }
     .aprov-circle {
       width: 32px; height: 32px; border-radius: 50%;
       background: #F4F6F9; border: 1.5px solid #D0D8E4;
       display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 500; color: #5F6B7A;
     }
-    .aprov-circle mat-icon { font-size: 16px; width: 16px; height: 16px; color: #9BA8B5; }
-    .aprov-node span { font-size: 10px; color: #9BA8B5; }
-    .aprov-node.done .aprov-circle  { background: #EAF3DE; border-color: #1D9E75; }
-    .aprov-node.done .aprov-circle mat-icon { color: #1D9E75; }
-    .aprov-node.active .aprov-circle { background: #E6F1FB; border-color: #378ADD; }
-    .aprov-node.active .aprov-circle mat-icon { color: #378ADD; }
-    .aprov-node.active span { color: #185FA5; font-weight: 500; }
-    .aprov-arrow { color: #D0D8E4; font-size: 16px; margin-top: -12px; }
+    .aprov-circle--pa { background: #EAF3DE; border-color: #1D9E75; color: #3B6D11; }
+    .aprov-arrow { color: #D0D8E4; font-size: 18px !important; margin-top: -14px; }
+    .aprov-hint  { font-size: 11px; color: #9BA8B5; margin: 0; }
 
-    .empty-state {
-      text-align: center; padding: 48px; color: #9BA8B5;
-      display: flex; flex-direction: column; align-items: center; gap: 12px;
-    }
-    .empty-state mat-icon { font-size: 48px; width: 48px; height: 48px; }
+    .form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
   `],
 })
-export class LiderSolicitudesComponent implements OnInit {
-  private solicitudesSvc = inject(SolicitudesService);
-  private candidatosSvc  = inject(CandidatosService);
-  private notif          = inject(NotificacionService);
-  private router         = inject(Router);
+export class LiderSolicitudFormComponent implements OnInit {
+  private solicitudesSvc  = inject(SolicitudesService);
+  private areasSvc        = inject(AreasService);
+  private perfilesSvc     = inject(PerfilesCargosService);
+  private centrosSvc      = inject(CentroCostosService);
+  private notif           = inject(NotificacionService);
+  private router          = inject(Router);
+  private fb              = inject(FormBuilder);
+  auth                    = inject(AuthService);
 
-  solicitudes = signal<SolicitudConCandidatos[]>([]);
-  cargando    = signal(true);
+  cargando  = signal(true);
+  guardando = signal(false);
+  areas     = signal<AreaItem[]>([]);
+  perfiles  = signal<PerfilCargoItem[]>([]);
+  centros   = signal<CentroCostoItem[]>([]);
+  fechaMinima = new Date();
+
+  // Computed: filtra áreas según texto escrito
+  areasFiltradas = computed(() => {
+    const texto = (this.form?.get('areaBusqueda')?.value ?? '').toLowerCase();
+    if (!texto || typeof texto !== 'string') return this.areas();
+    return this.areas().filter(a => a.Title.toLowerCase().includes(texto));
+  });
+
+  // Computed: filtra centros por código (Title) O nombre
+  centrosFiltrados = computed(() => {
+    const texto = (this.form?.get('centroBusqueda')?.value ?? '').toLowerCase();
+    if (!texto || typeof texto !== 'string') return this.centros();
+    return this.centros().filter(c =>
+      c.Title.toLowerCase().includes(texto) ||
+      c.NombreCentroCostos.toLowerCase().includes(texto)
+    );
+  });
+
+  // Computed: muestra campo objeto/obra solo para ciertos tipos de contrato
+  mostrarObjetoObra = computed(() => {
+    const tipo = this.form?.get('tipoContrato')?.value;
+    return tipo === 'Obra o Labor' || tipo === 'Prestación Servicios';
+  });
+
+  motivosVacante: MotivoVacante[]  = ['Creación Cargo','Renuncia','Terminación Contrato','Adición para Obra'];
+  nivelesExcel:   NivelExcel[]     = ['No Aplica','Básica','Intermedia','Avanzada'];
+  tiposContrato:  TipoContrato[]   = ['Término Indefinido','Término Fijo','Obra o Labor','Prestación Servicios','Aprendizaje'];
+  unidadesDuracion: UnidadDuracion[] = ['Días','Meses','Años'];
+
+  form = this.fb.group({
+    // Identificación
+    perfilId:             [null as number | null, Validators.required],
+    areaBusqueda:         [''],                               // campo de texto del autocomplete
+    areaId:               [null as number | null, Validators.required],
+    centroBusqueda:       [''],                               // campo de texto del autocomplete
+    centroCostoId:        [null as number | null, Validators.required],
+    motivoVacante:        ['' as MotivoVacante, Validators.required],
+    fechaRequeridaInicio: [null as Date | null, Validators.required],
+    jefeInmediato:        ['', Validators.required],
+    // Condiciones
+    rangoSalario:         ['', Validators.required],
+    pruebaExcel:          ['No Aplica' as NivelExcel],
+    trabajoAlturas:       [false],
+    elementosNecesarios:  [''],
+    // Contrato
+    tipoContrato:         ['' as TipoContrato, Validators.required],
+    duracionContrato:     [null as number | null, [Validators.required, Validators.min(1)]],
+    unidadDuracion:       ['Meses' as UnidadDuracion, Validators.required],
+    definicionObjetoObra: [''],
+  });
 
   ngOnInit() {
-    this.solicitudesSvc.getAll().subscribe({
-      next: async (solic) => {
-        const resultado: SolicitudConCandidatos[] = [];
-        for (const s of solic) {
-          const candidatos = await this.candidatosSvc
-            .getBySolicitud(s.Id).toPromise() ?? [];
-          resultado.push({
-            ...s,
-            totalCandidatos: candidatos.length,
-            seleccionados:   candidatos.filter(c => c.Estado === 'Seleccionado').length,
-          });
-        }
-        this.solicitudes.set(resultado);
+    forkJoin({
+      areas:    this.areasSvc.getAll(),
+      perfiles: this.perfilesSvc.getAll(),
+      centros:  this.centrosSvc.getAll(),
+    }).subscribe({
+      next: ({ areas, perfiles, centros }) => {
+        this.areas.set(areas);
+        this.perfiles.set(perfiles);
+        this.centros.set(centros);
         this.cargando.set(false);
       },
       error: () => {
-        this.notif.error('Error al cargar solicitudes');
+        this.notif.error('Error al cargar catálogos');
         this.cargando.set(false);
+      },
+    });
+
+    // Cuando cambia el tipo de contrato, limpia el campo objeto/obra si no aplica
+    this.form.get('tipoContrato')?.valueChanges.subscribe(tipo => {
+      if (tipo !== 'Obra o Labor' && tipo !== 'Prestación Servicios') {
+        this.form.get('definicionObjetoObra')?.setValue('');
+      }
+    });
+  }
+
+  // Muestra el nombre del área seleccionada en el input
+  displayArea(area: AreaItem | string): string {
+    if (!area) return '';
+    return typeof area === 'string' ? area : area.Title;
+  }
+
+  // Muestra código + nombre del centro seleccionado en el input
+  displayCentro(centro: CentroCostoItem | string): string {
+    if (!centro) return '';
+    return typeof centro === 'string' ? centro : `${centro.Title} — ${centro.NombreCentroCostos}`;
+  }
+
+  onAreaSelected(area: AreaItem) {
+    this.form.patchValue({ areaId: area.Id, areaBusqueda: area.Title });
+  }
+
+  onCentroSelected(centro: CentroCostoItem) {
+    this.form.patchValue({
+      centroCostoId: centro.Id,
+      centroBusqueda: `${centro.Title} — ${centro.NombreCentroCostos}`,
+    });
+  }
+
+  guardar() {
+    if (this.form.invalid) return;
+    this.guardando.set(true);
+    const v = this.form.value;
+    const fecha = v.fechaRequeridaInicio as Date;
+
+    this.solicitudesSvc.create({
+      Perfil_SolicitadoId:    v.perfilId!,
+      AreaSolicitanteId:      v.areaId!,
+      CentroCostoId:          v.centroCostoId!,
+      MotivoVacante:          v.motivoVacante!,
+      FechaRequeridaInicio:   fecha.toISOString(),
+      JefeInmediato:          v.jefeInmediato!,
+      RangoSalario:           v.rangoSalario!,
+      PruebaExcel:            v.pruebaExcel as NivelExcel,
+      TrabajoAlturasVigente:  v.trabajoAlturas ?? false,
+      ElementosNecesarios:    v.elementosNecesarios ?? '',
+      TipoContrato:           v.tipoContrato!,
+      DuracionContrato:       v.duracionContrato!,
+      UnidadDuracionContrato: v.unidadDuracion!,
+      DefinicionObjetoObra:   v.definicionObjetoObra ?? '',
+    }).subscribe({
+      next: () => {
+        this.notif.exito('Solicitud enviada. El flujo de aprobación ha iniciado.');
+        this.guardando.set(false);
+        this.router.navigate(['/lider/solicitudes']);
+      },
+      error: () => {
+        this.notif.error('Error al guardar la solicitud');
+        this.guardando.set(false);
       },
     });
   }
 
-  nueva()               { this.router.navigate(['/lider/solicitudes/nueva']); }
-  generarOferta(s: SolicitudItem) { this.router.navigate(['/lider/solicitudes', s.Id, 'oferta']); }
-
-  progreso(s: SolicitudItem): number {
-    return (s.Aprobado_Lider ? 1 : 0) + (s.Aprobado_DirAdm ? 1 : 0) + (s.Aprobado_Gerente ? 1 : 0);
-  }
-
-  claseBarra(s: SolicitudItem): string {
-    if (s.Estado_Aprobacion === 'Aprobado')  return 'success';
-    if (s.Estado_Aprobacion === 'Rechazado') return 'danger';
-    if (this.progreso(s) === 0)              return 'warning';
-    return 'info';
-  }
-
-  badgeEstado(e: EstadoAprobacion): string {
-    return { Aprobado: 'success', Rechazado: 'danger', Pendiente: 'warning' }[e] ?? 'neutral';
-  }
+  volver() { this.router.navigate(['/lider/solicitudes']); }
 }

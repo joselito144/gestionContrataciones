@@ -2,9 +2,8 @@ import { Component } from '@angular/core';
 import { LayoutShellComponent, NavItem } from '../../../shared/components/layout/layout-shell.component';
 
 const NAV: NavItem[] = [
-  { label: 'Nueva solicitud',       icon: 'add_circle_outline',    route: '/lider/solicitudes/nueva' },
-  { label: 'Mis solicitudes',       icon: 'assignment',            route: '/lider/solicitudes' },
-  { label: 'Seguimiento ofertas',   icon: 'track_changes',         route: '/lider/seguimiento' },
+  { label: 'Nueva solicitud', icon: 'add_circle_outline', route: '/lider/solicitudes/nueva' },
+  { label: 'Mis solicitudes', icon: 'assignment',         route: '/lider/solicitudes' },
 ];
 
 @Component({
