@@ -40,7 +40,7 @@ import { CandidatoItem, SolicitudItem } from '../../../shared/models';
             <h2>Nueva carta oferta</h2>
             @if (solicitud()) {
               <p class="subtitle">
-                {{ solicitud()?.Perfil_Solicitado?.Cargo }} ·
+                {{ solicitud()?.Pefil_solicitado?.Cargo }} ·
                 {{ solicitud()?.AreaSolicitante?.Title }}
               </p>
             }
@@ -58,7 +58,7 @@ import { CandidatoItem, SolicitudItem } from '../../../shared/models';
           <div class="resumen-grid">
             <div class="resumen-item">
               <span class="resumen-lbl">Perfil solicitado</span>
-              <span class="resumen-val">{{ solicitud()?.Perfil_Solicitado?.Cargo }}</span>
+              <span class="resumen-val">{{ solicitud()?.Pefil_solicitado?.Cargo }}</span>
             </div>
             <div class="resumen-item">
               <span class="resumen-lbl">Área</span>
@@ -252,7 +252,7 @@ export class CartaOfertaFormComponent implements OnInit {
 
         // Precarga el cargo desde el perfil del lookup
         this.form.patchValue({
-          cargo: solicitud.Perfil_Solicitado?.Cargo ?? '',
+          cargo: solicitud.Pefil_solicitado?.Cargo ?? '',
           // Si hay un solo candidato, lo preselecciona automáticamente
           candidatoId: candidatos.length === 1 ? candidatos[0].Id : null,
         });

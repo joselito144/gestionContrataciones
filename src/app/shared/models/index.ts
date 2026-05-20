@@ -109,8 +109,8 @@ export type UnidadDuracion = 'Días' | 'Meses' | 'Años';
 export interface SolicitudItem {
   Id: number;
   // Perfil solicitado — lookup a PerfilesCargos
-  Perfil_Solicitado: SpLookupPerfil;
-  Perfil_SolicitadoId: number;
+  Pefil_solicitado: SpLookupPerfil;
+  Pefil_solicitadoId: number;
   // Solicitante
   Solicitante: SpPersona;
   SolicitanteId: number;
@@ -120,7 +120,7 @@ export interface SolicitudItem {
   CentroCosto: SpLookup;
   CentroCostoId: number;
   // Fechas
-  Fecha_Solicitud: string;
+  Created: string;
   FechaRequeridaInicio: string;
   // Campos de perfil
   PruebaExcel: NivelExcel;
@@ -144,7 +144,7 @@ export interface SolicitudItem {
 }
 
 export interface SolicitudCreate {
-  Perfil_SolicitadoId: number;
+  Pefil_solicitadoId: number;
   AreaSolicitanteId: number;
   CentroCostoId: number;
   FechaRequeridaInicio: string;

@@ -453,7 +453,7 @@ export class LiderSolicitudFormComponent implements OnInit {
     const fecha = v.fechaRequeridaInicio as Date;
 
     this.solicitudesSvc.create({
-      Perfil_SolicitadoId:    v.perfilId!,
+      Pefil_solicitadoId:    v.perfilId!,
       AreaSolicitanteId:      v.areaId!,
       CentroCostoId:          v.centroCostoId!,
       MotivoVacante:          v.motivoVacante!,

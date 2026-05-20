@@ -159,7 +159,7 @@ export class SolicitudesComponent implements OnInit {
     const estado = this.filtroEstado as EstadoAprobacion | '';
     return this.solicitudes().filter(s => {
       const coincideTexto = !texto ||
-        s.Perfil_Solicitado?.Cargo?.toLowerCase().includes(texto) ||
+        s.Pefil_solicitado?.Cargo?.toLowerCase().includes(texto) ||
         s.Solicitante?.Title?.toLowerCase().includes(texto);
       const coincideEstado = !estado || s.Estado_Aprobacion === estado;
       return coincideTexto && coincideEstado;

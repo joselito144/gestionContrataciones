@@ -252,7 +252,7 @@ export class CartaOfertaFormComponent implements OnInit {
 
         // Precarga el cargo desde el perfil del lookup
         this.form.patchValue({
-          cargo: solicitud.Perfil_Solicitado?.Cargo ?? '',
+          cargo: solicitud.Pefil_solicitado?.Cargo ?? '',
           // Si hay un solo candidato, lo preselecciona automáticamente
           candidatoId: candidatos.length === 1 ? candidatos[0].Id : null,
         });

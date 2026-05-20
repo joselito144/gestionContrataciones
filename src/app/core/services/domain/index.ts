@@ -132,12 +132,12 @@ export class SolicitudesService {
     'JefeInmediato','RangoSalario','ElementosNecesarios',
     'TrabajoAlturasVigente','TipoContrato','DuracionContrato',
     'UnidadDuracionContrato','DefinicionObjetoObra',
-    'Perfil_Solicitado/Id','Perfil_Solicitado/Cargo',
+    'Pefil_solicitado/Id','Pefil_solicitado/Cargo',
     'Solicitante/Id','Solicitante/Title','Solicitante/EMail',
     'AreaSolicitante/Id','AreaSolicitante/Title',
     'CentroCosto/Id','CentroCosto/Title',
   ];
-  private E = ['Solicitante','AreaSolicitante','Perfil_Solicitado','CentroCosto'];
+  private E = ['Solicitante','AreaSolicitante','Pefil_solicitado','CentroCosto'];
 
   getAll(): Observable<SolicitudItem[]> {
     return this.sp.getAll<SolicitudItem>(SP_LISTS.SOLICITUDES, {
