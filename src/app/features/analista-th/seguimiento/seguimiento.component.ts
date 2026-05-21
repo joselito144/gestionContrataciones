@@ -3,19 +3,15 @@ import { CommonModule } from '@angular/common';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
 import { forkJoin } from 'rxjs';
-import { SolicitudesService, CandidatosService, OfertasService, ContratosService } from '../../../core/services/domain';
+import {
+  SolicitudesService,
+  ParticipacionesService,
+  OfertasService,
+  ContratosService,
+} from '../../../core/services/domain';
 import { NotificacionService } from '../../../core/services/notificacion.service';
-import { SolicitudItem, CandidatoItem, OfertaItem } from '../../../shared/models';
 
-interface ResumenProceso {
-  solicitudesTotal: number;
-  solicitudesAprobadas: number;
-  candidatosActivos: number;
-  candidatosSeleccionados: number;
-  ofertasEnviadas: number;
-  ofertasAceptadas: number;
-  contratosCompletados: number;
-}
+interface Kpi { valor: number; label: string; color: string; }
 
 @Component({
   selector: 'app-seguimiento',
@@ -26,133 +22,198 @@ interface ResumenProceso {
       <div class="page-header">
         <div>
           <h2>Seguimiento del proceso</h2>
-          <p class="subtitle">Vista consolidada del estado actual de todos los procesos</p>
+          <p class="subtitle">Estado consolidado de todos los procesos activos</p>
         </div>
       </div>
 
       @if (cargando()) {
         <div class="loading-center"><mat-spinner diameter="40" /></div>
       } @else {
+
         <!-- KPIs -->
         <div class="kpi-grid">
-          <div class="kpi-card">
-            <div class="kpi-val">{{ resumen().solicitudesTotal }}</div>
-            <div class="kpi-lbl">Solicitudes totales</div>
-          </div>
-          <div class="kpi-card kpi-success">
-            <div class="kpi-val">{{ resumen().solicitudesAprobadas }}</div>
-            <div class="kpi-lbl">Solicitudes aprobadas</div>
-          </div>
-          <div class="kpi-card kpi-info">
-            <div class="kpi-val">{{ resumen().candidatosActivos }}</div>
-            <div class="kpi-lbl">Candidatos activos</div>
-          </div>
-          <div class="kpi-card kpi-success">
-            <div class="kpi-val">{{ resumen().candidatosSeleccionados }}</div>
-            <div class="kpi-lbl">Seleccionados</div>
-          </div>
-          <div class="kpi-card kpi-warning">
-            <div class="kpi-val">{{ resumen().ofertasEnviadas }}</div>
-            <div class="kpi-lbl">Ofertas enviadas</div>
-          </div>
-          <div class="kpi-card kpi-success">
-            <div class="kpi-val">{{ resumen().ofertasAceptadas }}</div>
-            <div class="kpi-lbl">Ofertas aceptadas</div>
-          </div>
-          <div class="kpi-card kpi-purple">
-            <div class="kpi-val">{{ resumen().contratosCompletados }}</div>
-            <div class="kpi-lbl">Contratos firmados</div>
-          </div>
+          @for (k of kpis(); track k.label) {
+            <div class="kpi-card" [style.border-top-color]="k.color">
+              <div class="kpi-val" [style.color]="k.color">{{ k.valor }}</div>
+              <div class="kpi-lbl">{{ k.label }}</div>
+            </div>
+          }
         </div>
 
         <!-- Pipeline visual -->
-        <div class="card pipeline-card">
+        <div class="card">
           <p class="section-title">Pipeline de contratación</p>
           <div class="pipeline">
             <div class="pipeline-step">
-              <div class="step-circle">{{ resumen().solicitudesTotal }}</div>
-              <div class="step-label">Solicitudes</div>
+              <div class="step-num">{{ solicitudesTotal() }}</div>
+              <div class="step-lbl">Solicitudes</div>
             </div>
-            <div class="pipeline-arrow"><mat-icon>arrow_forward</mat-icon></div>
-            <div class="pipeline-step">
-              <div class="step-circle step-success">{{ resumen().solicitudesAprobadas }}</div>
-              <div class="step-label">Aprobadas</div>
+            <mat-icon class="pipe-arrow">arrow_forward</mat-icon>
+            <div class="pipeline-step step-blue">
+              <div class="step-num">{{ solicitudesAprobadas() }}</div>
+              <div class="step-lbl">Aprobadas</div>
             </div>
-            <div class="pipeline-arrow"><mat-icon>arrow_forward</mat-icon></div>
-            <div class="pipeline-step">
-              <div class="step-circle step-info">{{ resumen().candidatosActivos }}</div>
-              <div class="step-label">Candidatos</div>
+            <mat-icon class="pipe-arrow">arrow_forward</mat-icon>
+            <div class="pipeline-step step-teal">
+              <div class="step-num">{{ participacionesActivas() }}</div>
+              <div class="step-lbl">Candidatos activos</div>
             </div>
-            <div class="pipeline-arrow"><mat-icon>arrow_forward</mat-icon></div>
-            <div class="pipeline-step">
-              <div class="step-circle step-warning">{{ resumen().ofertasEnviadas }}</div>
-              <div class="step-label">Ofertas</div>
+            <mat-icon class="pipe-arrow">arrow_forward</mat-icon>
+            <div class="pipeline-step step-success">
+              <div class="step-num">{{ seleccionados() }}</div>
+              <div class="step-lbl">Seleccionados</div>
             </div>
-            <div class="pipeline-arrow"><mat-icon>arrow_forward</mat-icon></div>
-            <div class="pipeline-step">
-              <div class="step-circle step-purple">{{ resumen().contratosCompletados }}</div>
-              <div class="step-label">Contratos</div>
+            <mat-icon class="pipe-arrow">arrow_forward</mat-icon>
+            <div class="pipeline-step step-warning">
+              <div class="step-num">{{ ofertasEnviadas() }}</div>
+              <div class="step-lbl">Ofertas enviadas</div>
+            </div>
+            <mat-icon class="pipe-arrow">arrow_forward</mat-icon>
+            <div class="pipeline-step step-purple">
+              <div class="step-num">{{ ofertasAceptadas() }}</div>
+              <div class="step-lbl">Ofertas aceptadas</div>
             </div>
           </div>
+
+          <!-- Tasa de conversión -->
+          @if (solicitudesTotal() > 0) {
+            <div class="conversion-row">
+              <span class="conv-label">Tasa de conversión (solicitud → oferta aceptada)</span>
+              <span class="conv-val">
+                {{ ((ofertasAceptadas() / solicitudesTotal()) * 100) | number:'1.0-0' }}%
+              </span>
+            </div>
+          }
         </div>
+
       }
     </div>
   `,
   styles: [`
     .loading-center { display: flex; justify-content: center; padding: 48px; }
-    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
-    .kpi-card { background: #fff; border: 0.5px solid #D0D8E4; border-radius: 12px; padding: 16px; text-align: center; }
-    .kpi-val  { font-size: 28px; font-weight: 500; color: #1E3A5F; }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 12px; margin-bottom: 20px;
+    }
+    .kpi-card {
+      background: #fff; border: 0.5px solid #D0D8E4;
+      border-top: 3px solid #D0D8E4;
+      border-radius: 12px; padding: 16px; text-align: center;
+    }
+    .kpi-val  { font-size: 28px; font-weight: 500; }
     .kpi-lbl  { font-size: 11px; color: #9BA8B5; margin-top: 4px; }
-    .kpi-success { border-top: 3px solid #1D9E75; }
-    .kpi-info    { border-top: 3px solid #378ADD; }
-    .kpi-warning { border-top: 3px solid #BA7517; }
-    .kpi-purple  { border-top: 3px solid #534AB7; }
-    .pipeline-card { overflow-x: auto; }
-    .pipeline { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 16px 0; min-width: 500px; }
-    .pipeline-step { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-    .step-circle { width: 52px; height: 52px; border-radius: 50%; background: #F4F6F9; border: 2px solid #D0D8E4; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 500; color: #1E3A5F; }
-    .step-circle.step-success { background: #EAF3DE; border-color: #1D9E75; color: #3B6D11; }
-    .step-circle.step-info    { background: #E6F1FB; border-color: #378ADD; color: #185FA5; }
-    .step-circle.step-warning { background: #FAEEDA; border-color: #BA7517; color: #854F0B; }
-    .step-circle.step-purple  { background: #EEEDFE; border-color: #534AB7; color: #534AB7; }
-    .step-label { font-size: 12px; color: #5F6B7A; font-weight: 500; }
-    .pipeline-arrow mat-icon { color: #D0D8E4; }
+
+    .pipeline {
+      display: flex; align-items: center; justify-content: center;
+      gap: 8px; padding: 16px 0; flex-wrap: wrap;
+    }
+    .pipeline-step {
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+    }
+    .step-num {
+      width: 52px; height: 52px; border-radius: 50%;
+      background: #F4F6F9; border: 2px solid #D0D8E4;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 500; color: #1E3A5F;
+    }
+    .step-lbl  { font-size: 11px; color: #5F6B7A; font-weight: 500; text-align: center; max-width: 70px; }
+    .pipe-arrow { color: #D0D8E4; }
+
+    .step-blue    .step-num { background: #E6F1FB; border-color: #378ADD; color: #185FA5; }
+    .step-teal    .step-num { background: #E1F5EE; border-color: #1D9E75; color: #3B6D11; }
+    .step-success .step-num { background: #EAF3DE; border-color: #1D9E75; color: #3B6D11; }
+    .step-warning .step-num { background: #FAEEDA; border-color: #BA7517; color: #854F0B; }
+    .step-purple  .step-num { background: #EEEDFE; border-color: #534AB7; color: #534AB7; }
+
+    .conversion-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 0 0; border-top: 0.5px solid #EEF1F5; margin-top: 8px;
+    }
+    .conv-label { font-size: 12px; color: #5F6B7A; }
+    .conv-val   { font-size: 16px; font-weight: 500; color: #1E3A5F; }
   `],
 })
 export class SeguimientoComponent implements OnInit {
-  private solicitudesSvc = inject(SolicitudesService);
-  private candidatosSvc  = inject(CandidatosService);
-  private ofertasSvc     = inject(OfertasService);
-  private contratosSvc   = inject(ContratosService);
-  private notif          = inject(NotificacionService);
+  private solicitudesSvc   = inject(SolicitudesService);
+  private participacionSvc = inject(ParticipacionesService);
+  private ofertasSvc       = inject(OfertasService);
+  private notif            = inject(NotificacionService);
 
   cargando = signal(true);
-  resumen  = signal<ResumenProceso>({
-    solicitudesTotal: 0, solicitudesAprobadas: 0,
-    candidatosActivos: 0, candidatosSeleccionados: 0,
-    ofertasEnviadas: 0, ofertasAceptadas: 0, contratosCompletados: 0,
-  });
+
+  solicitudesTotal    = signal(0);
+  solicitudesAprobadas = signal(0);
+  participacionesActivas = signal(0);
+  seleccionados       = signal(0);
+  ofertasEnviadas     = signal(0);
+  ofertasAceptadas    = signal(0);
+
+  kpis = signal<Kpi[]>([]);
 
   ngOnInit() {
     forkJoin({
-      solicitudes: this.solicitudesSvc.getAll(),
-      candidatos:  this.candidatosSvc.getAll(),
-      ofertas:     this.ofertasSvc.getAll(),
+      solicitudes:    this.solicitudesSvc.getAll(),
+      participaciones: this.solicitudesSvc.getAll().pipe(), // reutilizamos solicitudes
+      ofertas:        this.ofertasSvc.getAll(),
     }).subscribe({
-      next: ({ solicitudes, candidatos, ofertas }) => {
-        this.resumen.set({
-          solicitudesTotal:        solicitudes.length,
-          solicitudesAprobadas:    solicitudes.filter(s => s.Estado_Aprobacion === 'Aprobado').length,
-          candidatosActivos:       candidatos.filter(c => c.Estado !== 'Descartado').length,
-          candidatosSeleccionados: candidatos.filter(c => c.Estado === 'Seleccionado').length,
-          ofertasEnviadas:         ofertas.filter(o => o.Estado_Oferta === 'Enviada').length,
-          ofertasAceptadas:        ofertas.filter(o => o.Estado_Oferta === 'Aceptada').length,
-          contratosCompletados:    0,
+      next: ({ solicitudes, ofertas }) => {
+        // Solicitudes
+        const total     = solicitudes.length;
+        const aprobadas = solicitudes.filter(s => s.Estado_Aprobacion === 'Aprobado').length;
+        const rechazadas = solicitudes.filter(s => s.Estado_Aprobacion === 'Rechazado').length;
+
+        // Ofertas
+        const enviadas  = ofertas.filter(o => o.Estado_Oferta === 'Enviada').length;
+        const aceptadas = ofertas.filter(o => o.Estado_Oferta === 'Aceptada').length;
+        const rechazadasOfertas = ofertas.filter(o => o.Estado_Oferta === 'Rechazada').length;
+
+        this.solicitudesTotal.set(total);
+        this.solicitudesAprobadas.set(aprobadas);
+        this.ofertasEnviadas.set(enviadas);
+        this.ofertasAceptadas.set(aceptadas);
+
+        // Cargar participaciones en paralelo para conteos
+        this.participacionSvc['sp'].getAll('Participaciones', {
+          select: ['Id', 'Estado'],
+        }).subscribe({
+          next: (parts: any[]) => {
+            this.participacionesActivas.set(
+              parts.filter((p: any) => p.Estado !== 'Descartado').length
+            );
+            this.seleccionados.set(
+              parts.filter((p: any) => p.Estado === 'Seleccionado').length
+            );
+            this.buildKpis(total, aprobadas, rechazadas, parts, enviadas, aceptadas, rechazadasOfertas);
+            this.cargando.set(false);
+          },
+          error: () => {
+            this.buildKpis(total, aprobadas, rechazadas, [], enviadas, aceptadas, rechazadasOfertas);
+            this.cargando.set(false);
+          },
         });
-        this.cargando.set(false);
       },
-      error: () => { this.notif.error('Error al cargar datos de seguimiento'); this.cargando.set(false); },
+      error: () => { this.notif.error('Error al cargar datos'); this.cargando.set(false); },
     });
+  }
+
+  buildKpis(total: number, aprobadas: number, rechazadas: number,
+            parts: any[], enviadas: number, aceptadas: number, rechazadasOfertas: number) {
+    const activos     = parts.filter(p => p.Estado !== 'Descartado').length;
+    const selec       = parts.filter(p => p.Estado === 'Seleccionado').length;
+    const descartados = parts.filter(p => p.Estado === 'Descartado').length;
+
+    this.kpis.set([
+      { valor: total,             label: 'Solicitudes totales',    color: '#1E3A5F' },
+      { valor: aprobadas,         label: 'Solicitudes aprobadas',  color: '#1D9E75' },
+      { valor: rechazadas,        label: 'Solicitudes rechazadas', color: '#E24B4A' },
+      { valor: activos,           label: 'Candidatos activos',     color: '#378ADD' },
+      { valor: selec,             label: 'Candidatos seleccionados', color: '#3B6D11' },
+      { valor: descartados,       label: 'Candidatos descartados', color: '#9BA8B5' },
+      { valor: enviadas,          label: 'Ofertas enviadas',       color: '#BA7517' },
+      { valor: aceptadas,         label: 'Ofertas aceptadas',      color: '#534AB7' },
+      { valor: rechazadasOfertas, label: 'Ofertas rechazadas',     color: '#E24B4A' },
+    ]);
   }
 }

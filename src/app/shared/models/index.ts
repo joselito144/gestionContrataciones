@@ -10,17 +10,15 @@ export interface SpLookup {
   Title?: string;
 }
 
-// Lookup específico para PerfilesCargos (campo título = Cargo)
 export interface SpLookupPerfil {
   Id: number;
   Cargo?: string;
 }
 
-// Lookup específico para CentroCostos
 export interface CentroCostoItem {
   Id: number;
-  Title: string;           // código, ej: "100419"
-  NombreCentroCostos: string; // descripción
+  Title: string;
+  NombreCentroCostos: string;
 }
 
 // ── Roles_App ─────────────────────────────────────────────────────────────────
@@ -108,33 +106,26 @@ export type UnidadDuracion = 'Días' | 'Meses' | 'Años';
 
 export interface SolicitudItem {
   Id: number;
-  // Perfil solicitado — lookup a PerfilesCargos
   Pefil_solicitado: SpLookupPerfil;
   Pefil_solicitadoId: number;
-  // Solicitante
   Solicitante: SpPersona;
   SolicitanteId: number;
-  // Área y centro de costos
   AreaSolicitante: SpLookup;
   AreaSolicitanteId: number;
   CentroCosto: SpLookup;
   CentroCostoId: number;
-  // Fechas
-  Created: string;
+  Fecha_Solicitud: string;
   FechaRequeridaInicio: string;
-  // Campos de perfil
   PruebaExcel: NivelExcel;
   MotivoVacante: MotivoVacante;
   JefeInmediato: string;
   RangoSalario: string;
   ElementosNecesarios: string;
   TrabajoAlturasVigente: boolean;
-  // Contrato
   TipoContrato: TipoContrato;
   DuracionContrato: number;
   UnidadDuracionContrato: UnidadDuracion;
   DefinicionObjetoObra: string;
-  // Aprobación
   Estado_Aprobacion: EstadoAprobacion;
   Aprobado_Lider: boolean;
   Aprobado_DirAdm: boolean;
@@ -160,41 +151,72 @@ export interface SolicitudCreate {
   DefinicionObjetoObra: string;
 }
 
-// ── Candidatos ────────────────────────────────────────────────────────────────
-export type EstadoCandidato = 'En proceso' | 'Seleccionado' | 'Descartado';
+// ── Candidatos — datos maestros de la persona ─────────────────────────────────
+// El CV y demás documentos van como adjuntos nativos del ítem en SP.
+// No hay vínculo directo a solicitudes — eso lo maneja Participaciones.
+
+export type TipoIdentificacion = 'CC' | 'CE' | 'PA' | 'NIT' | 'Otro';
 
 export interface CandidatoItem {
   Id: number;
-  ID_SolicitudId: number;
-  ID_Solicitud: SpLookup;
   Nombre_Completo: string;
+  TipoIdentificacion: TipoIdentificacion;
+  NumeroIdentificacion: string;
   Correo: string;
   Telefono: string;
-  Estado: EstadoCandidato;
-  Fecha_Ingreso: string;
-  CV_URL: { Url: string; Description: string } | null;
-  Examenes_OK: boolean;
+  Direccion: string;
   Notas_Analista: string;
 }
 
 export interface CandidatoCreate {
-  ID_SolicitudId: number;
   Nombre_Completo: string;
+  TipoIdentificacion: TipoIdentificacion;
+  NumeroIdentificacion: string;
   Correo: string;
   Telefono: string;
-  Estado: EstadoCandidato;
-  CV_URL?: { Url: string; Description: string };
-  Examenes_OK: boolean;
+  Direccion: string;
   Notas_Analista: string;
 }
 
+// ── Participaciones — intersección Candidato ↔ Solicitud ─────────────────────
+// Representa a un candidato dentro de un proceso de selección específico.
+// Los documentos del proceso (resultados exámenes, etc.) van como adjuntos aquí.
+
+export type EstadoParticipacion =
+  | 'En proceso'
+  | 'Seleccionado'
+  | 'Descartado';
+
+export interface ParticipacionItem {
+  Id: number;
+  Candidato: SpLookup;           // Title = Nombre_Completo
+  CandidatoId: number;
+  Solicitud: SpLookup;           // Title = Pefil_solicitado/Cargo
+  SolicitudId: number;
+  Estado: EstadoParticipacion;
+  Fecha_Ingreso: string;
+  Examenes_OK: boolean;
+  Notas_Proceso: string;         // observaciones específicas de esta participación
+}
+
+export interface ParticipacionCreate {
+  CandidatoId: number;
+  SolicitudId: number;
+  Estado: EstadoParticipacion;
+  Examenes_OK: boolean;
+  Notas_Proceso: string;
+}
+
 // ── Ofertas ───────────────────────────────────────────────────────────────────
+// ID_Participacion reemplaza a ID_Candidato — la oferta es para una
+// participación específica (candidato + solicitud), no para el candidato genérico.
+
 export type EstadoOferta = 'Enviada' | 'Aceptada' | 'Rechazada' | 'Vencida';
 
 export interface OfertaItem {
   Id: number;
-  ID_CandidatoId: number;
-  ID_Candidato: SpLookup;
+  ID_ParticipacionId: number;
+  ID_Participacion: SpLookup;
   Salario_Ofertado: number;
   Cargo: string;
   PDF_Oferta_URL: { Url: string; Description: string } | null;
@@ -206,7 +228,7 @@ export interface OfertaItem {
 }
 
 export interface OfertaCreate {
-  ID_CandidatoId: number;
+  ID_ParticipacionId: number;
   Salario_Ofertado: number;
   Cargo: string;
   Estado_Oferta: EstadoOferta;

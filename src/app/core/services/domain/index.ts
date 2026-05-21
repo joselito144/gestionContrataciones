@@ -8,8 +8,9 @@ import {
   AreaItem, AreaCreate,
   CentroCostoItem,
   PerfilCargoItem, PerfilCargoCreate,
-  SolicitudItem, SolicitudCreate, EstadoAprobacion,
-  CandidatoItem, CandidatoCreate, EstadoCandidato,
+  SolicitudItem, SolicitudCreate,
+  CandidatoItem, CandidatoCreate,
+  ParticipacionItem, ParticipacionCreate, EstadoParticipacion,
   OfertaItem, OfertaCreate,
   ContratoItem, ContratoCreate,
 } from '../../../shared/models';
@@ -49,7 +50,10 @@ export class AprobadoresService {
     return this.sp.getAll<AprobadorItem>(SP_LISTS.APROBADORES, { select: this.S, expand: this.E, orderBy: 'Orden', ascending: true });
   }
   getActivos(): Observable<AprobadorItem[]> {
-    return this.sp.getAll<AprobadorItem>(SP_LISTS.APROBADORES, { select: this.S, expand: this.E, filter: 'Activo eq true', orderBy: 'Orden', ascending: true });
+    return this.sp.getAll<AprobadorItem>(SP_LISTS.APROBADORES, {
+      select: this.S, expand: this.E,
+      filter: 'Activo eq true', orderBy: 'Orden', ascending: true,
+    });
   }
   create(data: AprobadorCreate): Observable<any> {
     return this.sp.create(SP_LISTS.APROBADORES, data as any);
@@ -71,7 +75,9 @@ export class AreasService {
   private sp = inject(SharepointBaseService);
 
   getAll(): Observable<AreaItem[]> {
-    return this.sp.getAll<AreaItem>(SP_LISTS.AREAS, { select: ['Id','Title','Descripcion'], orderBy: 'Title' });
+    return this.sp.getAll<AreaItem>(SP_LISTS.AREAS, {
+      select: ['Id','Title','Descripcion'], orderBy: 'Title',
+    });
   }
   create(data: AreaCreate): Observable<any> {
     return this.sp.create(SP_LISTS.AREAS, { Title: data.Title, Descripcion: data.Descripcion });
@@ -91,8 +97,7 @@ export class CentroCostosService {
 
   getAll(): Observable<CentroCostoItem[]> {
     return this.sp.getAll<CentroCostoItem>(SP_LISTS.CENTROS_COSTO, {
-      select: ['Id', 'Title', 'NombreCentroCostos'],
-      orderBy: 'Title',
+      select: ['Id','Title','NombreCentroCostos'], orderBy: 'Title',
     });
   }
 }
@@ -172,33 +177,29 @@ export class SolicitudesService {
   }
 }
 
-// ── Candidatos ────────────────────────────────────────────────────────────────
+// ── Candidatos — catálogo maestro ─────────────────────────────────────────────
+// Sin vínculo a solicitudes. El CV va como adjunto nativo del ítem en SP.
 @Injectable({ providedIn: 'root' })
 export class CandidatosService {
   private sp = inject(SharepointBaseService);
   private S = [
-    'Id','Nombre_Completo','Correo','Telefono','Estado',
-    'Fecha_Ingreso','CV_URL','Examenes_OK','Notas_Analista',
-    'ID_Solicitud/Id','ID_Solicitud/Title',
+    'Id','Nombre_Completo','TipoIdentificacion','NumeroIdentificacion',
+    'Correo','Telefono','Direccion','Notas_Analista',
   ];
-  private E = ['ID_Solicitud'];
 
   getAll(): Observable<CandidatoItem[]> {
-    return this.sp.getAll<CandidatoItem>(SP_LISTS.CANDIDATOS, { select: this.S, expand: this.E, orderBy: 'Fecha_Ingreso', ascending: false });
-  }
-  getById(id: number): Observable<CandidatoItem> {
-    return this.sp.getById<CandidatoItem>(SP_LISTS.CANDIDATOS, id, { select: this.S, expand: this.E });
-  }
-  getBySolicitud(solicitudId: number): Observable<CandidatoItem[]> {
     return this.sp.getAll<CandidatoItem>(SP_LISTS.CANDIDATOS, {
-      select: this.S, expand: this.E,
-      filter: `ID_SolicitudId eq ${solicitudId}`,
+      select: this.S, orderBy: 'Nombre_Completo',
     });
   }
-  getSeleccionados(solicitudId: number): Observable<CandidatoItem[]> {
+  getById(id: number): Observable<CandidatoItem> {
+    return this.sp.getById<CandidatoItem>(SP_LISTS.CANDIDATOS, id, { select: this.S });
+  }
+  buscar(texto: string): Observable<CandidatoItem[]> {
+    // Búsqueda por nombre o número de identificación
+    const filtro = `substringof('${texto}', Nombre_Completo) or substringof('${texto}', NumeroIdentificacion)`;
     return this.sp.getAll<CandidatoItem>(SP_LISTS.CANDIDATOS, {
-      select: this.S, expand: this.E,
-      filter: `ID_SolicitudId eq ${solicitudId} and Estado eq 'Seleccionado'`,
+      select: this.S, filter: filtro, top: 20,
     });
   }
   create(data: CandidatoCreate): Observable<any> {
@@ -207,29 +208,88 @@ export class CandidatosService {
   update(id: number, data: Partial<CandidatoCreate>): Observable<any> {
     return this.sp.update(SP_LISTS.CANDIDATOS, id, data as any);
   }
-  cambiarEstado(id: number, estado: EstadoCandidato): Observable<any> {
-    return this.sp.update(SP_LISTS.CANDIDATOS, id, { Estado: estado });
+}
+
+// ── Participaciones — intersección Candidato ↔ Solicitud ─────────────────────
+@Injectable({ providedIn: 'root' })
+export class ParticipacionesService {
+  private sp = inject(SharepointBaseService);
+  private S = [
+    'Id','Estado','Fecha_Ingreso','Examenes_OK','Notas_Proceso',
+    'Candidato/Id','Candidato/Title',
+    'Solicitud/Id','Solicitud/Title',
+  ];
+  private E = ['Candidato','Solicitud'];
+
+  getBySolicitud(solicitudId: number): Observable<ParticipacionItem[]> {
+    return this.sp.getAll<ParticipacionItem>(SP_LISTS.PARTICIPACIONES, {
+      select: this.S, expand: this.E,
+      filter: `SolicitudId eq ${solicitudId}`,
+      orderBy: 'Fecha_Ingreso', ascending: false,
+    });
+  }
+  getByCandidato(candidatoId: number): Observable<ParticipacionItem[]> {
+    return this.sp.getAll<ParticipacionItem>(SP_LISTS.PARTICIPACIONES, {
+      select: this.S, expand: this.E,
+      filter: `CandidatoId eq ${candidatoId}`,
+      orderBy: 'Fecha_Ingreso', ascending: false,
+    });
+  }
+  getSeleccionadosBySolicitud(solicitudId: number): Observable<ParticipacionItem[]> {
+    return this.sp.getAll<ParticipacionItem>(SP_LISTS.PARTICIPACIONES, {
+      select: this.S, expand: this.E,
+      filter: `SolicitudId eq ${solicitudId} and Estado eq 'Seleccionado'`,
+    });
+  }
+  getById(id: number): Observable<ParticipacionItem> {
+    return this.sp.getById<ParticipacionItem>(SP_LISTS.PARTICIPACIONES, id, {
+      select: this.S, expand: this.E,
+    });
+  }
+  create(data: ParticipacionCreate): Observable<any> {
+    return this.sp.create(SP_LISTS.PARTICIPACIONES, {
+      ...data,
+      Fecha_Ingreso: new Date().toISOString(),
+    });
+  }
+  update(id: number, data: Partial<ParticipacionCreate>): Observable<any> {
+    return this.sp.update(SP_LISTS.PARTICIPACIONES, id, data as any);
+  }
+  cambiarEstado(id: number, estado: EstadoParticipacion): Observable<any> {
+    return this.sp.update(SP_LISTS.PARTICIPACIONES, id, { Estado: estado });
+  }
+  // Verifica si un candidato ya está vinculado a una solicitud
+  existeParticipacion(candidatoId: number, solicitudId: number): Observable<ParticipacionItem[]> {
+    return this.sp.getAll<ParticipacionItem>(SP_LISTS.PARTICIPACIONES, {
+      select: ['Id'],
+      filter: `CandidatoId eq ${candidatoId} and SolicitudId eq ${solicitudId}`,
+      top: 1,
+    });
   }
 }
 
 // ── Ofertas ───────────────────────────────────────────────────────────────────
+// ID_Participacion reemplaza a ID_Candidato
 @Injectable({ providedIn: 'root' })
 export class OfertasService {
   private sp = inject(SharepointBaseService);
   private S = [
     'Id','Salario_Ofertado','Cargo','PDF_Oferta_URL',
     'Estado_Oferta','Aprobada_DirAdm','Fecha_Envio','Fecha_Respuesta','IP_Aceptacion',
-    'ID_Candidato/Id','ID_Candidato/Title',
+    'ID_Participacion/Id',
   ];
-  private E = ['ID_Candidato'];
+  private E = ['ID_Participacion'];
 
   getAll(): Observable<OfertaItem[]> {
-    return this.sp.getAll<OfertaItem>(SP_LISTS.OFERTAS, { select: this.S, expand: this.E, orderBy: 'Fecha_Envio', ascending: false });
-  }
-  getByCandidato(candidatoId: number): Observable<OfertaItem[]> {
     return this.sp.getAll<OfertaItem>(SP_LISTS.OFERTAS, {
       select: this.S, expand: this.E,
-      filter: `ID_CandidatoId eq ${candidatoId}`,
+      orderBy: 'Fecha_Envio', ascending: false,
+    });
+  }
+  getByParticipacion(participacionId: number): Observable<OfertaItem[]> {
+    return this.sp.getAll<OfertaItem>(SP_LISTS.OFERTAS, {
+      select: this.S, expand: this.E,
+      filter: `ID_ParticipacionId eq ${participacionId}`,
     });
   }
   create(data: OfertaCreate): Observable<any> {

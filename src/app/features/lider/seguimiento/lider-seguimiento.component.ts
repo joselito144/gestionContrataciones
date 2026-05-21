@@ -27,7 +27,7 @@ import { OfertaItem, EstadoOferta } from '../../../shared/models';
             <div class="oferta-header">
               <div>
                 <div class="oferta-cargo">{{ o.Cargo }}</div>
-                <div class="oferta-candidato">{{ o.ID_Candidato?.Title }}</div>
+                <div class="oferta-candidato">{{ o.ID_Participacion?.Title }}</div>
               </div>
               <div class="oferta-right">
                 <span [class]="'badge badge--' + badgeEstado(o.Estado_Oferta)">{{ o.Estado_Oferta }}</span>

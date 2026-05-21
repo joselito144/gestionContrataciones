@@ -152,3 +152,15 @@ html, body {
   &.snack-error   .mdc-snackbar__surface { background: var(--color-danger); }
   &.snack-warn    .mdc-snackbar__surface { background: var(--color-warning); }
 }
+
+// ── Document Viewer Dialog ────────────────────────────────────────────────────
+.document-viewer-dialog .mat-mdc-dialog-container {
+  padding: 0 !important;
+  overflow: hidden;
+  border-radius: var(--radius-lg) !important;
+}
+
+.document-viewer-dialog .mdc-dialog__surface {
+  border-radius: var(--radius-lg) !important;
+  overflow: hidden;
+}

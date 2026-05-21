@@ -6,6 +6,7 @@ export const SP_LISTS = {
   PERFILES_CARGOS: 'PerfilesCargos',
   SOLICITUDES:     'Solicitudes',
   CANDIDATOS:      'Candidatos',
+  PARTICIPACIONES: 'Participaciones',
   OFERTAS:         'Ofertas',
   CONTRATOS:       'Contratos',
 } as const;
