@@ -140,7 +140,7 @@ interface SolicitudConResumen extends SolicitudItem {
                 <mat-icon>folder_open</mat-icon> Ver documentos
               </button>
               <span class="sol-fecha">
-                Creada el {{ s.Fecha_Solicitud | date:'dd/MM/yyyy' }}
+                Creada el {{ s.Created | date:'dd/MM/yyyy' }}
               </span>
             </div>
           </div>

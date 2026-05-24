@@ -19,7 +19,7 @@ import {
 @Injectable({ providedIn: 'root' })
 export class RolesAppService {
   private sp = inject(SharepointBaseService);
-  private S = ['Id','Rol','Activo','Usuario/Id','Usuario/Title','Usuario/EMail'];
+  private S = ['Id', 'Rol', 'Activo', 'Usuario/Id', 'Usuario/Title', 'Usuario/EMail'];
   private E = ['Usuario'];
 
   getAll(): Observable<RolAppItem[]> {
@@ -43,7 +43,7 @@ export class RolesAppService {
 @Injectable({ providedIn: 'root' })
 export class AprobadoresService {
   private sp = inject(SharepointBaseService);
-  private S = ['Id','Cargo','Orden','Activo','Persona/Id','Persona/Title','Persona/EMail'];
+  private S = ['Id', 'Cargo', 'Orden', 'Activo', 'Persona/Id', 'Persona/Title', 'Persona/EMail'];
   private E = ['Persona'];
 
   getAll(): Observable<AprobadorItem[]> {
@@ -76,7 +76,7 @@ export class AreasService {
 
   getAll(): Observable<AreaItem[]> {
     return this.sp.getAll<AreaItem>(SP_LISTS.AREAS, {
-      select: ['Id','Title','Descripcion'], orderBy: 'Title',
+      select: ['Id', 'Title', 'Descripcion'], orderBy: 'Title',
     });
   }
   create(data: AreaCreate): Observable<any> {
@@ -97,7 +97,7 @@ export class CentroCostosService {
 
   getAll(): Observable<CentroCostoItem[]> {
     return this.sp.getAll<CentroCostoItem>(SP_LISTS.CENTROS_COSTO, {
-      select: ['Id','Title','NombreCentroCostos'], orderBy: 'Title',
+      select: ['Id', 'Title', 'NombreCentroCostos'], orderBy: 'Title',
     });
   }
 }
@@ -106,7 +106,7 @@ export class CentroCostosService {
 @Injectable({ providedIn: 'root' })
 export class PerfilesCargosService {
   private sp = inject(SharepointBaseService);
-  private S = ['Id','Cargo','ExperienciaMinima','ComptenciasRequeridas','FormacionConocimiento'];
+  private S = ['Id', 'Cargo', 'ExperienciaMinima', 'ComptenciasRequeridas', 'FormacionConocimiento'];
 
   getAll(): Observable<PerfilCargoItem[]> {
     return this.sp.getAll<PerfilCargoItem>(SP_LISTS.PERFILES_CARGOS, { select: this.S, orderBy: 'Cargo' });
@@ -130,24 +130,24 @@ export class PerfilesCargosService {
 export class SolicitudesService {
   private sp = inject(SharepointBaseService);
   private S = [
-    'Id','FechaRequeridaInicio','Fecha_Solicitud',
-    'PruebaExcel','MotivoVacante','Estado_Aprobacion',
-    'Aprobado_Lider','Aprobado_DirAdm','Aprobado_Gerente',
-    'Fecha_Aprobacion','Observaciones',
-    'JefeInmediato','RangoSalario','ElementosNecesarios',
-    'TrabajoAlturasVigente','TipoContrato','DuracionContrato',
-    'UnidadDuracionContrato','DefinicionObjetoObra',
-    'Pefil_solicitado/Id','Pefil_solicitado/Cargo',
-    'Solicitante/Id','Solicitante/Title','Solicitante/EMail',
-    'AreaSolicitante/Id','AreaSolicitante/Title',
-    'CentroCosto/Id','CentroCosto/Title',
+    'Id', 'FechaRequeridaInicio', 'Created',
+    'PruebaExcel', 'MotivoVacante', 'Estado_Aprobacion',
+    'Aprobado_Lider', 'Aprobado_DirAdm', 'Aprobado_Gerente',
+    'Fecha_Aprobacion', 'Observaciones',
+    'JefeInmediato', 'RangoSalario', 'ElementosNecesarios',
+    'TrabajoAlturasVigente', 'TipoContrato', 'DuracionContrato',
+    'UnidadDuracionContrato', 'DefinicionObjetoObra',
+    'Pefil_solicitado/Id', 'Pefil_solicitado/Cargo',
+    'Solicitante/Id', 'Solicitante/Title', 'Solicitante/EMail',
+    'AreaSolicitante/Id', 'AreaSolicitante/Title',
+    'CentroCosto/Id', 'CentroCosto/Title',
   ];
-  private E = ['Solicitante','AreaSolicitante','Pefil_solicitado','CentroCosto'];
+  private E = ['Solicitante', 'AreaSolicitante', 'Pefil_solicitado', 'CentroCosto'];
 
   getAll(): Observable<SolicitudItem[]> {
     return this.sp.getAll<SolicitudItem>(SP_LISTS.SOLICITUDES, {
       select: this.S, expand: this.E,
-      orderBy: 'Fecha_Solicitud', ascending: false,
+      orderBy: 'Created', ascending: false,
     });
   }
   getById(id: number): Observable<SolicitudItem> {
@@ -183,8 +183,8 @@ export class SolicitudesService {
 export class CandidatosService {
   private sp = inject(SharepointBaseService);
   private S = [
-    'Id','Nombre_Completo','TipoIdentificacion','NumeroIdentificacion',
-    'Correo','Telefono','Direccion','Notas_Analista',
+    'Id', 'Nombre_Completo', 'TipoIdentificacion', 'NumeroIdentificacion',
+    'Correo', 'Telefono', 'Direccion', 'Notas_Analista',
   ];
 
   getAll(): Observable<CandidatoItem[]> {
@@ -215,11 +215,13 @@ export class CandidatosService {
 export class ParticipacionesService {
   private sp = inject(SharepointBaseService);
   private S = [
-    'Id','Estado','Fecha_Ingreso','Examenes_OK','Notas_Proceso',
-    'Candidato/Id','Candidato/Title',
-    'Solicitud/Id','Solicitud/Title',
+    'Id', 'Estado', 'Fecha_Ingreso', 'Examenes_OK', 'Notas_Proceso',
+    'CandidatoId',  
+    'SolicitudId',  
+    'Candidato/Id', 'Candidato/Title',
+    'Solicitud/Id', 'Solicitud/Title',
   ];
-  private E = ['Candidato','Solicitud'];
+  private E = ['Candidato', 'Solicitud'];
 
   getBySolicitud(solicitudId: number): Observable<ParticipacionItem[]> {
     return this.sp.getAll<ParticipacionItem>(SP_LISTS.PARTICIPACIONES, {
@@ -274,8 +276,8 @@ export class ParticipacionesService {
 export class OfertasService {
   private sp = inject(SharepointBaseService);
   private S = [
-    'Id','Salario_Ofertado','Cargo','PDF_Oferta_URL',
-    'Estado_Oferta','Aprobada_DirAdm','Fecha_Envio','Fecha_Respuesta','IP_Aceptacion',
+    'Id', 'Salario_Ofertado', 'Cargo', 'PDF_Oferta_URL',
+    'Estado_Oferta', 'Aprobada_DirAdm', 'Fecha_Envio', 'Fecha_Respuesta', 'IP_Aceptacion',
     'ID_Participacion/Id',
   ];
   private E = ['ID_Participacion'];
@@ -305,9 +307,9 @@ export class OfertasService {
 export class ContratosService {
   private sp = inject(SharepointBaseService);
   private S = [
-    'Id','DocuSign_EnvelopeID','Estado_Firma',
-    'Fecha_Envio_DocuSign','Fecha_Firma_Aspirante','Fecha_Firma_RepLegal',
-    'PDF_Firmado_URL','Certificado_Auditoria','Archivado',
+    'Id', 'DocuSign_EnvelopeID', 'Estado_Firma',
+    'Fecha_Envio_DocuSign', 'Fecha_Firma_Aspirante', 'Fecha_Firma_RepLegal',
+    'PDF_Firmado_URL', 'Certificado_Auditoria', 'Archivado',
     'ID_Oferta/Id',
   ];
   private E = ['ID_Oferta'];

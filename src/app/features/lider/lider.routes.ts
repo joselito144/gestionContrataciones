@@ -10,7 +10,7 @@ export const LIDER_ROUTES: Routes = [
       {
         path: 'solicitudes',
         loadComponent: () =>
-          import('./seguimiento/lider-seguimiento.component').then(m => m.LiderSeguimientoComponent),
+          import('./solicitudes/lider-solicitudes.component').then(m => m.LiderSolicitudesComponent),
       },
       {
         path: 'solicitudes/nueva',

@@ -114,7 +114,7 @@ export interface SolicitudItem {
   AreaSolicitanteId: number;
   CentroCosto: SpLookup;
   CentroCostoId: number;
-  Fecha_Solicitud: string;
+  Created: string;
   FechaRequeridaInicio: string;
   PruebaExcel: NivelExcel;
   MotivoVacante: MotivoVacante;
@@ -136,6 +136,7 @@ export interface SolicitudItem {
 
 export interface SolicitudCreate {
   Pefil_solicitadoId: number;
+  SolicitanteId: number;
   AreaSolicitanteId: number;
   CentroCostoId: number;
   FechaRequeridaInicio: string;

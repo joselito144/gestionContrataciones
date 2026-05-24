@@ -160,8 +160,6 @@ import {
             <div>
               <p><strong>Al guardar esta carta oferta:</strong></p>
               <ul>
-                <li>Se crea el registro en la lista Ofertas de SharePoint</li>
-                <li>Power Automate genera el PDF desde la plantilla Word</li>
                 <li>La oferta pasa a aprobación del Director Administrativo</li>
                 <li>Una vez aprobada, se envía automáticamente al aspirante</li>
               </ul>
@@ -208,25 +206,25 @@ import {
 })
 export class CartaOfertaFormComponent implements OnInit {
   private participacionSvc = inject(ParticipacionesService);
-  private solicitudesSvc   = inject(SolicitudesService);
-  private candidatosSvc    = inject(CandidatosService);
-  private ofertasSvc       = inject(OfertasService);
-  private notif            = inject(NotificacionService);
-  private router           = inject(Router);
-  private route            = inject(ActivatedRoute);
-  private fb               = inject(FormBuilder);
+  private solicitudesSvc = inject(SolicitudesService);
+  private candidatosSvc = inject(CandidatosService);
+  private ofertasSvc = inject(OfertasService);
+  private notif = inject(NotificacionService);
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
+  private fb = inject(FormBuilder);
 
-  cargando      = signal(true);
-  guardando     = signal(false);
+  cargando = signal(true);
+  guardando = signal(false);
   participacion = signal<ParticipacionItem | null>(null);
-  solicitud     = signal<SolicitudItem | null>(null);
-  candidato     = signal<CandidatoItem | null>(null);
+  solicitud = signal<SolicitudItem | null>(null);
+  candidato = signal<CandidatoItem | null>(null);
 
   form = this.fb.group({
-    cargo:         ['', Validators.required],
-    salario:       [null as number | null, [Validators.required, Validators.min(1)]],
-    fechaInicio:   [null as Date | null, Validators.required],
-    tipoContrato:  ['', Validators.required],
+    cargo: ['', Validators.required],
+    salario: [null as number | null, [Validators.required, Validators.min(1)]],
+    fechaInicio: [null as Date | null, Validators.required],
+    tipoContrato: ['', Validators.required],
     observaciones: [''],
   });
 
@@ -239,8 +237,12 @@ export class CartaOfertaFormComponent implements OnInit {
 
         // Carga candidato y solicitud en paralelo usando los IDs del lookup
         forkJoin({
-          solicitud: this.solicitudesSvc.getById(participacion.SolicitudId),
-          candidato: this.candidatosSvc.getById(participacion.CandidatoId),
+          solicitud: this.solicitudesSvc.getById(
+            participacion.SolicitudId ?? participacion.Solicitud?.Id!
+          ),
+          candidato: this.candidatosSvc.getById(
+            participacion.CandidatoId ?? participacion.Candidato?.Id!
+          ),
         }).subscribe({
           next: ({ solicitud, candidato }) => {
             this.solicitud.set(solicitud);
@@ -248,7 +250,7 @@ export class CartaOfertaFormComponent implements OnInit {
 
             // Precarga cargo y tipo de contrato desde la solicitud
             this.form.patchValue({
-              cargo:        solicitud.Pefil_solicitado?.Cargo ?? '',
+              cargo: solicitud.Pefil_solicitado?.Cargo ?? '',
               tipoContrato: solicitud.TipoContrato ?? '',
             });
 
@@ -271,15 +273,15 @@ export class CartaOfertaFormComponent implements OnInit {
     if (this.form.invalid) return;
     this.guardando.set(true);
 
-    const v     = this.form.value;
+    const v = this.form.value;
     const fecha = v.fechaInicio as Date;
 
     this.ofertasSvc.create({
       ID_ParticipacionId: this.participacion()!.Id,
-      Salario_Ofertado:   v.salario!,
-      Cargo:              v.cargo!,
-      Estado_Oferta:      'Enviada',
-      Aprobada_DirAdm:    false,
+      Salario_Ofertado: v.salario!,
+      Cargo: v.cargo!,
+      Estado_Oferta: 'Enviada',
+      Aprobada_DirAdm: false,
     }).subscribe({
       next: () => {
         this.notif.exito(

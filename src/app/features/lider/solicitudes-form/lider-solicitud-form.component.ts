@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
@@ -12,9 +13,8 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
-import { MatDividerModule } from '@angular/material/divider';
-import { MatStepperModule } from '@angular/material/stepper';
 import { forkJoin } from 'rxjs';
+import { map, startWith } from 'rxjs/operators';
 import {
   SolicitudesService,
   AreasService,
@@ -36,7 +36,7 @@ import {
     MatFormFieldModule, MatInputModule, MatSelectModule,
     MatAutocompleteModule, MatButtonModule, MatIconModule,
     MatProgressSpinnerModule, MatDatepickerModule, MatNativeDateModule,
-    MatSlideToggleModule, MatDividerModule, MatStepperModule,
+    MatSlideToggleModule,
   ],
   template: `
     <div class="page-container">
@@ -62,7 +62,6 @@ import {
             <p class="section-title">1. Identificación del requerimiento</p>
             <div class="field-grid">
 
-              <!-- Perfil solicitado -->
               <mat-form-field appearance="outline">
                 <mat-label>Perfil / cargo solicitado *</mat-label>
                 <mat-select formControlName="perfilId">
@@ -75,6 +74,24 @@ import {
                 }
               </mat-form-field>
 
+              <!-- Info del perfil seleccionado -->
+              @if (perfilSeleccionado()) {
+                <div class="perfil-info full">
+                  <div class="perfil-info-item">
+                    <span class="perfil-lbl">Competencias requeridas</span>
+                    <span class="perfil-val">
+                      {{ perfilSeleccionado()!.ComptenciasRequeridas || '—' }}
+                    </span>
+                  </div>
+                  <div class="perfil-info-item">
+                    <span class="perfil-lbl">Formación y conocimiento</span>
+                    <span class="perfil-val">
+                      {{ perfilSeleccionado()!.FormacionConocimiento || '—' }}
+                    </span>
+                  </div>
+                </div>
+              }
+
               <!-- Área — autocomplete -->
               <mat-form-field appearance="outline">
                 <mat-label>Área solicitante *</mat-label>
@@ -85,9 +102,7 @@ import {
                   [displayWith]="displayArea"
                   (optionSelected)="onAreaSelected($event.option.value)">
                   @for (a of areasFiltradas(); track a.Id) {
-                    <mat-option [value]="a">
-                      {{ a.Title }}
-                    </mat-option>
+                    <mat-option [value]="a">{{ a.Title }}</mat-option>
                   }
                 </mat-autocomplete>
                 @if (form.get('areaId')?.hasError('required') && form.get('areaBusqueda')?.touched) {
@@ -95,7 +110,7 @@ import {
                 }
               </mat-form-field>
 
-              <!-- Centro de costos — autocomplete por código o descripción -->
+              <!-- Centro de costos — autocomplete -->
               <mat-form-field appearance="outline">
                 <mat-label>Centro de costos *</mat-label>
                 <input matInput formControlName="centroBusqueda"
@@ -116,7 +131,6 @@ import {
                 }
               </mat-form-field>
 
-              <!-- Motivo vacante -->
               <mat-form-field appearance="outline">
                 <mat-label>Motivo de la vacante *</mat-label>
                 <mat-select formControlName="motivoVacante">
@@ -126,7 +140,6 @@ import {
                 </mat-select>
               </mat-form-field>
 
-              <!-- Fecha requerida -->
               <mat-form-field appearance="outline">
                 <mat-label>Fecha requerida de inicio *</mat-label>
                 <input matInput [matDatepicker]="picker"
@@ -134,13 +147,18 @@ import {
                   [min]="fechaMinima" />
                 <mat-datepicker-toggle matIconSuffix [for]="picker" />
                 <mat-datepicker #picker />
+                @if (form.get('fechaRequeridaInicio')?.hasError('required') && form.get('fechaRequeridaInicio')?.touched) {
+                  <mat-error>La fecha de inicio es requerida</mat-error>
+                }
               </mat-form-field>
 
-              <!-- Jefe inmediato -->
               <mat-form-field appearance="outline">
                 <mat-label>Jefe inmediato *</mat-label>
                 <input matInput formControlName="jefeInmediato"
                   placeholder="Nombre del jefe inmediato" />
+                @if (form.get('jefeInmediato')?.hasError('required') && form.get('jefeInmediato')?.touched) {
+                  <mat-error>El jefe inmediato es requerido</mat-error>
+                }
               </mat-form-field>
 
             </div>
@@ -151,15 +169,16 @@ import {
             <p class="section-title">2. Condiciones del cargo</p>
             <div class="field-grid">
 
-              <!-- Rango salarial -->
               <mat-form-field appearance="outline">
                 <mat-label>Rango salarial (COP) *</mat-label>
                 <input matInput formControlName="rangoSalario"
                   placeholder="Ej: 2000000" />
                 <span matPrefix>$&nbsp;</span>
+                @if (form.get('rangoSalario')?.hasError('required') && form.get('rangoSalario')?.touched) {
+                  <mat-error>El rango salarial es requerido</mat-error>
+                }
               </mat-form-field>
 
-              <!-- Prueba Excel -->
               <mat-form-field appearance="outline">
                 <mat-label>Nivel de Excel requerido</mat-label>
                 <mat-select formControlName="pruebaExcel">
@@ -169,7 +188,6 @@ import {
                 </mat-select>
               </mat-form-field>
 
-              <!-- Trabajo en alturas -->
               <div class="toggle-field">
                 <label>¿Requiere trabajo en alturas vigente?</label>
                 <mat-slide-toggle formControlName="trabajoAlturas" color="primary">
@@ -177,7 +195,6 @@ import {
                 </mat-slide-toggle>
               </div>
 
-              <!-- Elementos necesarios -->
               <mat-form-field appearance="outline" class="full">
                 <mat-label>Elementos necesarios para la contratación</mat-label>
                 <textarea matInput formControlName="elementosNecesarios"
@@ -206,6 +223,9 @@ import {
               <mat-form-field appearance="outline">
                 <mat-label>Duración *</mat-label>
                 <input matInput type="number" formControlName="duracionContrato" min="1" />
+                @if (form.get('duracionContrato')?.hasError('required') && form.get('duracionContrato')?.touched) {
+                  <mat-error>La duración es requerida</mat-error>
+                }
               </mat-form-field>
 
               <mat-form-field appearance="outline">
@@ -217,7 +237,6 @@ import {
                 </mat-select>
               </mat-form-field>
 
-              <!-- Objeto/obra — visible solo para Obra o Labor y Prestación Servicios -->
               @if (mostrarObjetoObra()) {
                 <mat-form-field appearance="outline" class="full">
                   <mat-label>Definición del objeto / obra *</mat-label>
@@ -275,7 +294,6 @@ import {
             </p>
           </div>
 
-          <!-- Acciones -->
           <div class="form-actions">
             <button mat-button type="button" (click)="volver()">Cancelar</button>
             <button mat-flat-button color="primary" type="submit"
@@ -295,20 +313,33 @@ import {
   styles: [`
     .loading-center { display: flex; justify-content: center; padding: 48px; }
 
+    .perfil-info {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+      background: #E6F1FB; border-radius: 8px;
+      padding: 12px 14px; border: 0.5px solid #B5D4F4;
+    }
+    .perfil-info-item { display: flex; flex-direction: column; gap: 3px; }
+    .perfil-lbl {
+      font-size: 10px; color: #185FA5;
+      text-transform: uppercase; letter-spacing: .04em; font-weight: 500;
+    }
+    .perfil-val { font-size: 12px; color: #1E3A5F; white-space: pre-wrap; }
+
+    .centro-codigo { font-weight: 500; color: #1E3A5F; }
+    .centro-nombre { color: #9BA8B5; font-size: 12px; }
+
     .toggle-field {
       display: flex; flex-direction: column; gap: 8px;
       justify-content: center; padding: 8px 0;
     }
     .toggle-field label { font-size: 12px; color: #5F6B7A; font-weight: 500; }
 
-    .centro-codigo { font-weight: 500; color: #1E3A5F; }
-    .centro-nombre { color: #9BA8B5; font-size: 12px; }
-
     .solicitante-row { display: flex; align-items: flex-start; gap: 12px; }
     .avatar {
       width: 40px; height: 40px; border-radius: 50%;
       background: #1E3A5F; display: flex; align-items: center;
-      justify-content: center; font-size: 14px; font-weight: 500; color: #fff; flex-shrink: 0;
+      justify-content: center; font-size: 14px; font-weight: 500;
+      color: #fff; flex-shrink: 0;
     }
     .user-name  { font-size: 13px; font-weight: 500; color: #1E3A5F; }
     .user-email { font-size: 12px; color: #9BA8B5; }
@@ -345,56 +376,65 @@ export class LiderSolicitudFormComponent implements OnInit {
   areas     = signal<AreaItem[]>([]);
   perfiles  = signal<PerfilCargoItem[]>([]);
   centros   = signal<CentroCostoItem[]>([]);
+  perfilSeleccionado = signal<PerfilCargoItem | null>(null);
   fechaMinima = new Date();
 
-  // Computed: filtra áreas según texto escrito
+  motivosVacante:   MotivoVacante[]   = ['Creación Cargo','Renuncia','Terminación Contrato','Adición para Obra'];
+  nivelesExcel:     NivelExcel[]      = ['No Aplica','Básica','Intermedia','Avanzada'];
+  tiposContrato:    TipoContrato[]    = ['Término Indefinido','Término Fijo','Obra o Labor','Prestación Servicios','Aprendizaje'];
+  unidadesDuracion: UnidadDuracion[]  = ['Días','Meses','Años'];
+
+  form = this.fb.group({
+    perfilId:             [null as number | null, Validators.required],
+    areaBusqueda:         [''],
+    areaId:               [null as number | null, Validators.required],
+    centroBusqueda:       [''],
+    centroCostoId:        [null as number | null, Validators.required],
+    motivoVacante:        ['' as MotivoVacante,   Validators.required],
+    fechaRequeridaInicio: [null as Date | null,   Validators.required],
+    jefeInmediato:        ['', Validators.required],
+    rangoSalario:         ['', Validators.required],
+    pruebaExcel:          ['No Aplica' as NivelExcel],
+    trabajoAlturas:       [false],
+    elementosNecesarios:  [''],
+    tipoContrato:         ['' as TipoContrato,    Validators.required],
+    duracionContrato:     [null as number | null, [Validators.required, Validators.min(1)]],
+    unidadDuracion:       ['Meses' as UnidadDuracion, Validators.required],
+    definicionObjetoObra: [''],
+  });
+
+  // Convierte valueChanges en signal para que computed() reaccione
+  private tipoContratoSignal = toSignal(
+    this.form.get('tipoContrato')!.valueChanges,
+    { initialValue: this.form.get('tipoContrato')!.value }
+  );
+  private areaBusquedaSignal = toSignal(
+    this.form.get('areaBusqueda')!.valueChanges,
+    { initialValue: '' }
+  );
+  private centroBusquedaSignal = toSignal(
+    this.form.get('centroBusqueda')!.valueChanges,
+    { initialValue: '' }
+  );
+
+  mostrarObjetoObra = computed(() => {
+    const tipo = this.tipoContratoSignal();
+    return tipo === 'Obra o Labor' || tipo === 'Prestación Servicios';
+  });
+
   areasFiltradas = computed(() => {
-    const texto = (this.form?.get('areaBusqueda')?.value ?? '').toLowerCase();
+    const texto = (this.areaBusquedaSignal() ?? '').toLowerCase();
     if (!texto || typeof texto !== 'string') return this.areas();
     return this.areas().filter(a => a.Title.toLowerCase().includes(texto));
   });
 
-  // Computed: filtra centros por código (Title) O nombre
   centrosFiltrados = computed(() => {
-    const texto = (this.form?.get('centroBusqueda')?.value ?? '').toLowerCase();
+    const texto = (this.centroBusquedaSignal() ?? '').toLowerCase();
     if (!texto || typeof texto !== 'string') return this.centros();
     return this.centros().filter(c =>
       c.Title.toLowerCase().includes(texto) ||
       c.NombreCentroCostos.toLowerCase().includes(texto)
     );
-  });
-
-  // Computed: muestra campo objeto/obra solo para ciertos tipos de contrato
-  mostrarObjetoObra = computed(() => {
-    const tipo = this.form?.get('tipoContrato')?.value;
-    return tipo === 'Obra o Labor' || tipo === 'Prestación Servicios';
-  });
-
-  motivosVacante: MotivoVacante[]  = ['Creación Cargo','Renuncia','Terminación Contrato','Adición para Obra'];
-  nivelesExcel:   NivelExcel[]     = ['No Aplica','Básica','Intermedia','Avanzada'];
-  tiposContrato:  TipoContrato[]   = ['Término Indefinido','Término Fijo','Obra o Labor','Prestación Servicios','Aprendizaje'];
-  unidadesDuracion: UnidadDuracion[] = ['Días','Meses','Años'];
-
-  form = this.fb.group({
-    // Identificación
-    perfilId:             [null as number | null, Validators.required],
-    areaBusqueda:         [''],                               // campo de texto del autocomplete
-    areaId:               [null as number | null, Validators.required],
-    centroBusqueda:       [''],                               // campo de texto del autocomplete
-    centroCostoId:        [null as number | null, Validators.required],
-    motivoVacante:        ['' as MotivoVacante, Validators.required],
-    fechaRequeridaInicio: [null as Date | null, Validators.required],
-    jefeInmediato:        ['', Validators.required],
-    // Condiciones
-    rangoSalario:         ['', Validators.required],
-    pruebaExcel:          ['No Aplica' as NivelExcel],
-    trabajoAlturas:       [false],
-    elementosNecesarios:  [''],
-    // Contrato
-    tipoContrato:         ['' as TipoContrato, Validators.required],
-    duracionContrato:     [null as number | null, [Validators.required, Validators.min(1)]],
-    unidadDuracion:       ['Meses' as UnidadDuracion, Validators.required],
-    definicionObjetoObra: [''],
   });
 
   ngOnInit() {
@@ -409,13 +449,16 @@ export class LiderSolicitudFormComponent implements OnInit {
         this.centros.set(centros);
         this.cargando.set(false);
       },
-      error: () => {
-        this.notif.error('Error al cargar catálogos');
-        this.cargando.set(false);
-      },
+      error: () => { this.notif.error('Error al cargar catálogos'); this.cargando.set(false); },
     });
 
-    // Cuando cambia el tipo de contrato, limpia el campo objeto/obra si no aplica
+    // Actualiza el perfil seleccionado al cambiar el select
+    this.form.get('perfilId')?.valueChanges.subscribe(id => {
+      const perfil = this.perfiles().find(p => p.Id === id) ?? null;
+      this.perfilSeleccionado.set(perfil);
+    });
+
+    // Limpia objeto/obra si cambia a tipo que no lo requiere
     this.form.get('tipoContrato')?.valueChanges.subscribe(tipo => {
       if (tipo !== 'Obra o Labor' && tipo !== 'Prestación Servicios') {
         this.form.get('definicionObjetoObra')?.setValue('');
@@ -423,13 +466,11 @@ export class LiderSolicitudFormComponent implements OnInit {
     });
   }
 
-  // Muestra el nombre del área seleccionada en el input
   displayArea(area: AreaItem | string): string {
     if (!area) return '';
     return typeof area === 'string' ? area : area.Title;
   }
 
-  // Muestra código + nombre del centro seleccionado en el input
   displayCentro(centro: CentroCostoItem | string): string {
     if (!centro) return '';
     return typeof centro === 'string' ? centro : `${centro.Title} — ${centro.NombreCentroCostos}`;
@@ -453,7 +494,7 @@ export class LiderSolicitudFormComponent implements OnInit {
     const fecha = v.fechaRequeridaInicio as Date;
 
     this.solicitudesSvc.create({
-      Pefil_solicitadoId:    v.perfilId!,
+      Pefil_solicitadoId:     v.perfilId!,
       AreaSolicitanteId:      v.areaId!,
       CentroCostoId:          v.centroCostoId!,
       MotivoVacante:          v.motivoVacante!,
@@ -467,16 +508,14 @@ export class LiderSolicitudFormComponent implements OnInit {
       DuracionContrato:       v.duracionContrato!,
       UnidadDuracionContrato: v.unidadDuracion!,
       DefinicionObjetoObra:   v.definicionObjetoObra ?? '',
+      SolicitanteId:          this.auth.usuario()!.id,
     }).subscribe({
       next: () => {
         this.notif.exito('Solicitud enviada. El flujo de aprobación ha iniciado.');
         this.guardando.set(false);
         this.router.navigate(['/lider/solicitudes']);
       },
-      error: () => {
-        this.notif.error('Error al guardar la solicitud');
-        this.guardando.set(false);
-      },
+      error: () => { this.notif.error('Error al guardar la solicitud'); this.guardando.set(false); },
     });
   }
 
