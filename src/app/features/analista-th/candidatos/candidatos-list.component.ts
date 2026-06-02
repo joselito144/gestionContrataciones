@@ -2,131 +2,159 @@ import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
+import { MatTableModule } from '@angular/material/table';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatChipsModule } from '@angular/material/chips';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { CandidatosService } from '../../../core/services/domain';
 import { NotificacionService } from '../../../core/services/notificacion.service';
 import { DocumentViewerService } from '../../../shared/components/document-viewer/document-viewer.service';
 import { CandidatoItem } from '../../../shared/models';
+import { SP_LISTS } from '../../../core/services/sp-lists.constants';
 
 @Component({
   selector: 'app-candidatos-list',
   standalone: true,
   imports: [
-    CommonModule, FormsModule,
-    MatButtonModule, MatIconModule, MatFormFieldModule,
-    MatInputModule, MatProgressSpinnerModule, MatTooltipModule,
+    CommonModule, FormsModule, ReactiveFormsModule,
+    MatTableModule, MatFormFieldModule, MatInputModule,
+    MatButtonModule, MatIconModule, MatProgressSpinnerModule,
+    MatTooltipModule, MatChipsModule,
   ],
   template: `
     <div class="page-container">
       <div class="page-header">
         <div>
           <h2>Candidatos</h2>
-          <p class="subtitle">Catálogo de candidatos registrados</p>
+          <p class="subtitle">{{ candidatosFiltrados().length }} candidatos registrados</p>
         </div>
         <button mat-flat-button color="primary" (click)="nuevo()">
           <mat-icon>person_add</mat-icon> Nuevo candidato
         </button>
       </div>
 
+      <!-- Filtros -->
       <div class="filtros-bar card">
         <mat-form-field appearance="outline" class="search-field">
-          <mat-label>Buscar por nombre o identificación</mat-label>
-          <input matInput [(ngModel)]="textoBusqueda" />
+          <mat-label>Buscar por nombre</mat-label>
+          <input matInput [formControl]="ctrlNombre" />
           <mat-icon matSuffix>search</mat-icon>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="search-field">
+          <mat-label>Buscar por cédula</mat-label>
+          <input matInput [formControl]="ctrlCedula" />
+          <mat-icon matSuffix>badge</mat-icon>
         </mat-form-field>
       </div>
 
       @if (cargando()) {
         <div class="loading-center"><mat-spinner diameter="40" /></div>
       } @else {
-        <p class="results-info">{{ candidatosFiltrados().length }} candidatos</p>
+        <div class="table-wrap">
+          <table mat-table [dataSource]="candidatosFiltrados()" class="data-table">
 
-        <div class="candidatos-grid">
-          @for (c of candidatosFiltrados(); track c.Id) {
-            <div class="candidato-card card">
-              <div class="cand-header">
-                <div class="avatar">{{ iniciales(c.Nombre_Completo) }}</div>
-                <div class="cand-info">
-                  <div class="cand-nombre">{{ c.Nombre_Completo }}</div>
-                  <div class="cand-id">
-                    {{ c.TipoIdentificacion }} {{ c.NumeroIdentificacion }}
+            <!-- Columna nombre -->
+            <ng-container matColumnDef="nombre">
+              <th mat-header-cell *matHeaderCellDef>Candidato</th>
+              <td mat-cell *matCellDef="let c">
+                <div class="cell-nombre">
+                  <div class="avatar-sm">{{ iniciales(c.Nombre_Completo) }}</div>
+                  <div>
+                    <div class="nombre">{{ c.Nombre_Completo }}</div>
+                    <div class="correo">{{ c.Correo }}</div>
                   </div>
-                  <div class="cand-correo">{{ c.Correo }}</div>
-                  <div class="cand-tel">{{ c.Telefono }}</div>
                 </div>
-              </div>
+              </td>
+            </ng-container>
 
-              @if (c.Direccion) {
-                <div class="cand-direccion">
-                  <mat-icon>place</mat-icon> {{ c.Direccion }}
+            <!-- Columna identificación -->
+            <ng-container matColumnDef="identificacion">
+              <th mat-header-cell *matHeaderCellDef>Identificación</th>
+              <td mat-cell *matCellDef="let c">
+                <span class="badge badge--purple">{{ c.TipoIdentificacion }}</span>
+                {{ c.NumeroIdentificacion }}
+              </td>
+            </ng-container>
+
+            <!-- Columna teléfono -->
+            <ng-container matColumnDef="telefono">
+              <th mat-header-cell *matHeaderCellDef>Teléfono</th>
+              <td mat-cell *matCellDef="let c" class="text-muted">{{ c.Telefono }}</td>
+            </ng-container>
+
+            <!-- Columna acciones -->
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef></th>
+              <td mat-cell *matCellDef="let c">
+                <div class="acciones-row">
+                  <button mat-icon-button color="primary"
+                    matTooltip="Editar candidato"
+                    (click)="editar(c)">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button mat-icon-button color="accent"
+                    matTooltip="Ver procesos en los que participa"
+                    (click)="verProcesos(c)">
+                    <mat-icon>work_history</mat-icon>
+                  </button>
+                  <button mat-icon-button color="primary"
+                    matTooltip="Ver documentos adjuntos (CV, certificados)"
+                    (click)="verDocumentos(c)">
+                    <mat-icon>folder_open</mat-icon>
+                  </button>
                 </div>
-              }
+              </td>
+            </ng-container>
 
-              <div class="cand-footer">
-                <button mat-stroked-button (click)="editar(c)">
-                  <mat-icon>edit</mat-icon> Editar
-                </button>
-                <button mat-stroked-button color="accent"
-                  (click)="verProcesos(c)"
-                  matTooltip="Ver procesos en los que participa">
-                  <mat-icon>work_history</mat-icon> Procesos
-                </button>
-                <button mat-icon-button color="primary"
-                  matTooltip="Ver documentos adjuntos"
-                  (click)="verDocumentos(c)">
-                  <mat-icon>folder_open</mat-icon>
-                </button>
-              </div>
+            <tr mat-header-row *matHeaderRowDef="columnas; sticky: true"></tr>
+            <tr mat-row *matRowDef="let row; columns: columnas;"
+              class="clickable-row"
+              (click)="editar(row)"></tr>
+
+          </table>
+
+          @if (candidatosFiltrados().length === 0) {
+            <div class="empty-state">
+              <mat-icon>people_outline</mat-icon>
+              <p>No hay candidatos que coincidan con los filtros</p>
+              <button mat-flat-button color="primary" (click)="nuevo()">
+                Registrar el primero
+              </button>
             </div>
           }
         </div>
-
-        @if (candidatosFiltrados().length === 0) {
-          <div class="empty-state">
-            <mat-icon>people_outline</mat-icon>
-            <p>No hay candidatos registrados aún</p>
-            <button mat-flat-button color="primary" (click)="nuevo()">
-              Registrar el primero
-            </button>
-          </div>
-        }
       }
     </div>
   `,
   styles: [`
-    .filtros-bar  { display: flex; gap: 16px; flex-wrap: wrap; }
-    .search-field { flex: 1; min-width: 200px; }
-    .results-info { font-size: 12px; color: #9BA8B5; margin-bottom: 8px; }
+    .filtros-bar   { display: flex; gap: 16px; flex-wrap: wrap; }
+    .search-field  { flex: 1; min-width: 200px; }
     .loading-center { display: flex; justify-content: center; padding: 48px; }
-    .candidatos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
-    .candidato-card { display: flex; flex-direction: column; gap: 10px; }
-    .cand-header  { display: flex; align-items: flex-start; gap: 12px; }
-    .avatar {
-      width: 44px; height: 44px; border-radius: 50%;
+
+    .table-wrap { border: 0.5px solid #D0D8E4; border-radius: 12px; overflow: hidden; }
+    .data-table { width: 100%; }
+
+    .cell-nombre { display: flex; align-items: center; gap: 10px; }
+    .avatar-sm {
+      width: 34px; height: 34px; border-radius: 50%;
       background: #1E3A5F; display: flex; align-items: center;
-      justify-content: center; font-size: 15px; font-weight: 500;
+      justify-content: center; font-size: 12px; font-weight: 500;
       color: #fff; flex-shrink: 0;
     }
-    .cand-info    { flex: 1; min-width: 0; }
-    .cand-nombre  { font-size: 14px; font-weight: 500; color: #1E3A5F; }
-    .cand-id      { font-size: 12px; color: #534AB7; font-weight: 500; margin-top: 1px; }
-    .cand-correo  { font-size: 12px; color: #9BA8B5; }
-    .cand-tel     { font-size: 12px; color: #9BA8B5; }
-    .cand-direccion {
-      display: flex; align-items: center; gap: 4px;
-      font-size: 12px; color: #9BA8B5;
-    }
-    .cand-direccion mat-icon { font-size: 14px; width: 14px; height: 14px; }
-    .cand-footer {
-      display: flex; align-items: center; gap: 6px;
-      padding-top: 8px; border-top: 0.5px solid #EEF1F5;
-      flex-wrap: wrap;
-    }
+    .nombre  { font-size: 13px; font-weight: 500; color: #1E3A5F; }
+    .correo  { font-size: 11px; color: #9BA8B5; }
+    .text-muted { color: #9BA8B5; font-size: 13px; }
+
+    .acciones-row { display: flex; align-items: center; }
+    .clickable-row { cursor: pointer; }
+    .clickable-row:hover td { background: #F4F6F9; }
+
     .empty-state {
       text-align: center; padding: 48px; color: #9BA8B5;
       display: flex; flex-direction: column; align-items: center; gap: 12px;
@@ -142,16 +170,22 @@ export class CandidatosListComponent implements OnInit {
 
   candidatos   = signal<CandidatoItem[]>([]);
   cargando     = signal(true);
-  textoBusqueda = '';
+  columnas     = ['nombre', 'identificacion', 'telefono', 'acciones'];
+
+  ctrlNombre = new FormControl('');
+  ctrlCedula = new FormControl('');
+
+  private nombreSignal = toSignal(this.ctrlNombre.valueChanges, { initialValue: '' });
+  private cedulaSignal = toSignal(this.ctrlCedula.valueChanges, { initialValue: '' });
 
   candidatosFiltrados = computed(() => {
-    const t = this.textoBusqueda.toLowerCase();
-    if (!t) return this.candidatos();
-    return this.candidatos().filter(c =>
-      c.Nombre_Completo.toLowerCase().includes(t) ||
-      c.NumeroIdentificacion?.toLowerCase().includes(t) ||
-      c.Correo?.toLowerCase().includes(t)
-    );
+    const nombre = (this.nombreSignal() ?? '').toLowerCase();
+    const cedula = (this.cedulaSignal() ?? '').toLowerCase();
+    return this.candidatos().filter(c => {
+      const mNombre = !nombre || c.Nombre_Completo.toLowerCase().includes(nombre);
+      const mCedula = !cedula || c.NumeroIdentificacion?.toLowerCase().includes(cedula);
+      return mNombre && mCedula;
+    });
   });
 
   ngOnInit() {
@@ -165,11 +199,11 @@ export class CandidatosListComponent implements OnInit {
   editar(c: CandidatoItem)   { this.router.navigate(['/analista/candidatos', c.Id]); }
   verProcesos(c: CandidatoItem) { this.router.navigate(['/analista/candidatos', c.Id, 'procesos']); }
   verDocumentos(c: CandidatoItem) {
-    this.viewer.abrir(c.Nombre_Completo, 'Candidatos', c.Id);
+    this.viewer.abrir(c.Nombre_Completo, SP_LISTS.CANDIDATOS, c.Id);
   }
 
   iniciales(n: string): string {
-    const p = n.trim().split(' ');
-    return p.length >= 2 ? (p[0][0] + p[1][0]).toUpperCase() : n.substring(0, 2).toUpperCase();
+    const p = n?.trim().split(' ') ?? [];
+    return p.length >= 2 ? (p[0][0] + p[1][0]).toUpperCase() : (n ?? '??').substring(0, 2).toUpperCase();
   }
 }

@@ -137,7 +137,12 @@ export class SolicitudesService {
     'JefeInmediato', 'RangoSalario', 'ElementosNecesarios',
     'TrabajoAlturasVigente', 'TipoContrato', 'DuracionContrato',
     'UnidadDuracionContrato', 'DefinicionObjetoObra',
-    'Pefil_solicitado/Id', 'Pefil_solicitado/Cargo',
+    'AmpliarPerfilCargo',
+    'Pefil_solicitado/Id', 
+    'Pefil_solicitado/Cargo', 
+    'Pefil_solicitado/ExperienciaMinima',
+    // 'Pefil_solicitado/FormacionConocimiento', 
+    // 'Pefil_solicitado/ComptenciasRequeridas',
     'Solicitante/Id', 'Solicitante/Title', 'Solicitante/EMail',
     'AreaSolicitante/Id', 'AreaSolicitante/Title',
     'CentroCosto/Id', 'CentroCosto/Title',
@@ -216,8 +221,9 @@ export class ParticipacionesService {
   private sp = inject(SharepointBaseService);
   private S = [
     'Id', 'Estado', 'Fecha_Ingreso', 'Examenes_OK', 'Notas_Proceso',
-    'CandidatoId',  
-    'SolicitudId',  
+    'CandidatoId',
+    'Candidato/Nombre_Completo',
+    'SolicitudId',
     'Candidato/Id', 'Candidato/Title',
     'Solicitud/Id', 'Solicitud/Title',
   ];

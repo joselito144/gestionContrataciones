@@ -132,6 +132,7 @@ export interface SolicitudItem {
   Aprobado_Gerente: boolean;
   Fecha_Aprobacion: string | null;
   Observaciones: string;
+  AmpliarPerfilCargo: string;  
 }
 
 export interface SolicitudCreate {
@@ -150,6 +151,7 @@ export interface SolicitudCreate {
   DuracionContrato: number;
   UnidadDuracionContrato: UnidadDuracion;
   DefinicionObjetoObra: string;
+  AmpliarPerfilCargo: string;   // campo 5, no obligatorio — enviar '' si vacío
 }
 
 // ── Candidatos — datos maestros de la persona ─────────────────────────────────

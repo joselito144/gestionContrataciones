@@ -8,10 +8,11 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatDividerModule } from '@angular/material/divider';
 import { CandidatosService } from '../../../core/services/domain';
 import { NotificacionService } from '../../../core/services/notificacion.service';
+import { PnpConfigService } from '../../../core/services/pnp.config';
 import { TipoIdentificacion } from '../../../shared/models';
+import '@pnp/sp/attachments';
 
 @Component({
   selector: 'app-candidato-form',
@@ -19,7 +20,7 @@ import { TipoIdentificacion } from '../../../shared/models';
   imports: [
     CommonModule, ReactiveFormsModule,
     MatFormFieldModule, MatInputModule, MatSelectModule,
-    MatButtonModule, MatIconModule, MatProgressSpinnerModule, MatDividerModule,
+    MatButtonModule, MatIconModule, MatProgressSpinnerModule,
   ],
   template: `
     <div class="page-container">
@@ -30,10 +31,7 @@ import { TipoIdentificacion } from '../../../shared/models';
           </button>
           <div>
             <h2>{{ esNuevo ? 'Nuevo candidato' : 'Editar candidato' }}</h2>
-            <p class="subtitle">
-              Datos maestros del candidato ·
-              El CV y documentos se adjuntan directamente al registro en SharePoint
-            </p>
+            <p class="subtitle">Datos maestros del candidato</p>
           </div>
         </div>
       </div>
@@ -80,17 +78,16 @@ import { TipoIdentificacion } from '../../../shared/models';
             </div>
           </div>
 
-          <!-- Datos de contacto -->
+          <!-- Contacto -->
           <div class="card">
             <p class="section-title">2. Datos de contacto</p>
             <div class="field-grid">
 
               <mat-form-field appearance="outline">
                 <mat-label>Correo electrónico *</mat-label>
-                <input matInput formControlName="correo"
-                  type="email" placeholder="correo@dominio.com" />
+                <input matInput formControlName="correo" type="email" />
                 @if (form.get('correo')?.hasError('email') && form.get('correo')?.touched) {
-                  <mat-error>Formato de correo inválido</mat-error>
+                  <mat-error>Formato inválido</mat-error>
                 }
                 @if (form.get('correo')?.hasError('required') && form.get('correo')?.touched) {
                   <mat-error>El correo es requerido</mat-error>
@@ -99,8 +96,7 @@ import { TipoIdentificacion } from '../../../shared/models';
 
               <mat-form-field appearance="outline">
                 <mat-label>Teléfono *</mat-label>
-                <input matInput formControlName="telefono"
-                  placeholder="300 000 0000" />
+                <input matInput formControlName="telefono" />
                 @if (form.get('telefono')?.hasError('required') && form.get('telefono')?.touched) {
                   <mat-error>El teléfono es requerido</mat-error>
                 }
@@ -115,30 +111,63 @@ import { TipoIdentificacion } from '../../../shared/models';
             </div>
           </div>
 
+          <!-- Hoja de vida -->
+          <div class="card">
+            <p class="section-title">3. Hoja de vida</p>
+            @if (esNuevo) {
+              <div class="cv-info">
+                <mat-icon>info_outline</mat-icon>
+                <p>Guarda primero el candidato. Una vez creado el registro podrás adjuntar la hoja de vida desde el botón de edición.</p>
+              </div>
+            } @else {
+              <div class="cv-upload-area">
+                <input #fileInput type="file"
+                  accept=".pdf,.doc,.docx"
+                  style="display:none"
+                  (change)="onFileSelected($event)" />
+
+                @if (!archivoSeleccionado()) {
+                  <div class="cv-dropzone" (click)="fileInput.click()">
+                    <mat-icon>upload_file</mat-icon>
+                    <p><strong>Seleccionar hoja de vida</strong></p>
+                    <p class="hint">PDF, DOC o DOCX · El archivo quedará adjunto al registro del candidato en SharePoint</p>
+                  </div>
+                } @else {
+                  <div class="cv-preview">
+                    <mat-icon class="file-icon">description</mat-icon>
+                    <div class="file-info">
+                      <div class="file-name">{{ archivoSeleccionado()!.name }}</div>
+                      <div class="file-size">{{ formatSize(archivoSeleccionado()!.size) }}</div>
+                    </div>
+                    <button mat-icon-button color="warn"
+                      type="button"
+                      matTooltip="Quitar archivo"
+                      (click)="limpiarArchivo(fileInput)">
+                      <mat-icon>close</mat-icon>
+                    </button>
+                  </div>
+                }
+
+                @if (subiendoCV()) {
+                  <div class="cv-uploading">
+                    <mat-spinner diameter="20" />
+                    <span>Adjuntando hoja de vida...</span>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+
           <!-- Notas -->
           <div class="card">
-            <p class="section-title">3. Observaciones del analista</p>
-            <mat-form-field appearance="outline" class="full-width">
+            <p class="section-title">4. Observaciones del analista</p>
+            <mat-form-field appearance="outline" style="width:100%">
               <mat-label>Notas generales</mat-label>
               <textarea matInput formControlName="notas" rows="3"
-                placeholder="Observaciones generales sobre el candidato (no específicas de un proceso)...">
+                placeholder="Observaciones generales sobre el candidato...">
               </textarea>
             </mat-form-field>
           </div>
-
-          <!-- Documentos -->
-          @if (!esNuevo) {
-            <div class="card info-card">
-              <mat-icon>info_outline</mat-icon>
-              <div>
-                <p><strong>Documentos del candidato (CV, certificados, etc.)</strong></p>
-                <p class="hint">
-                  Para adjuntar o ver documentos, dirígete al ítem del candidato en SharePoint
-                  o usa el visor de documentos desde la lista de candidatos.
-                </p>
-              </div>
-            </div>
-          }
 
           <div class="form-actions">
             <button mat-button type="button" (click)="volver()">Cancelar</button>
@@ -155,14 +184,40 @@ import { TipoIdentificacion } from '../../../shared/models';
   `,
   styles: [`
     .loading-center { display: flex; justify-content: center; padding: 48px; }
-    .full-width { width: 100%; }
-    .info-card {
-      display: flex; gap: 12px;
-      background: #E6F1FB; border-color: #B5D4F4;
+
+    .cv-info {
+      display: flex; align-items: flex-start; gap: 10px;
+      background: #E6F1FB; border-radius: 8px; padding: 12px 14px;
     }
-    .info-card mat-icon { color: #185FA5; flex-shrink: 0; margin-top: 2px; }
-    .info-card p    { margin: 0 0 4px; font-size: 13px; color: #1E3A5F; }
-    .info-card .hint { font-size: 12px; color: #5F6B7A; margin: 0; }
+    .cv-info mat-icon { color: #185FA5; flex-shrink: 0; }
+    .cv-info p { margin: 0; font-size: 13px; color: #1E3A5F; }
+
+    .cv-upload-area { display: flex; flex-direction: column; gap: 10px; }
+    .cv-dropzone {
+      border: 2px dashed #D0D8E4; border-radius: 8px;
+      padding: 28px; text-align: center; cursor: pointer;
+      transition: border-color .15s, background .15s;
+    }
+    .cv-dropzone:hover { border-color: #378ADD; background: #F4F6F9; }
+    .cv-dropzone mat-icon { font-size: 36px; width: 36px; height: 36px; color: #D0D8E4; }
+    .cv-dropzone p { margin: 6px 0 0; font-size: 13px; color: #5F6B7A; }
+    .cv-dropzone .hint { font-size: 11px; color: #9BA8B5; }
+
+    .cv-preview {
+      display: flex; align-items: center; gap: 12px;
+      background: #EAF3DE; border-radius: 8px; padding: 12px 14px;
+      border: 0.5px solid #97C459;
+    }
+    .file-icon { color: #3B6D11; font-size: 28px; width: 28px; height: 28px; }
+    .file-info  { flex: 1; }
+    .file-name  { font-size: 13px; font-weight: 500; color: #1E3A5F; }
+    .file-size  { font-size: 11px; color: #9BA8B5; }
+
+    .cv-uploading {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 13px; color: #5F6B7A; padding: 8px 0;
+    }
+
     .form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
   `],
 })
@@ -172,10 +227,13 @@ export class CandidatoFormComponent implements OnInit {
   private router = inject(Router);
   private route  = inject(ActivatedRoute);
   private fb     = inject(FormBuilder);
+  private pnp    = inject(PnpConfigService);
 
-  cargando  = signal(true);
-  guardando = signal(false);
-  esNuevo   = true;
+  cargando          = signal(true);
+  guardando         = signal(false);
+  subiendoCV        = signal(false);
+  archivoSeleccionado = signal<File | null>(null);
+  esNuevo           = true;
   candidatoId: number | null = null;
 
   tiposId: TipoIdentificacion[] = ['CC','CE','PA','NIT','Otro'];
@@ -192,7 +250,7 @@ export class CandidatoFormComponent implements OnInit {
 
   ngOnInit() {
     const id = this.route.snapshot.paramMap.get('id');
-    this.esNuevo    = !id;
+    this.esNuevo     = !id;
     this.candidatoId = id ? +id : null;
 
     if (!this.esNuevo && this.candidatoId) {
@@ -216,6 +274,42 @@ export class CandidatoFormComponent implements OnInit {
     }
   }
 
+  onFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file  = input.files?.[0] ?? null;
+    this.archivoSeleccionado.set(file);
+  }
+
+  limpiarArchivo(input: HTMLInputElement) {
+    input.value = '';
+    this.archivoSeleccionado.set(null);
+  }
+
+  formatSize(bytes: number): string {
+    if (bytes < 1024)        return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  async adjuntarCV(candidatoId: number): Promise<void> {
+    const file = this.archivoSeleccionado();
+    if (!file) return;
+
+    this.subiendoCV.set(true);
+    try {
+      const buffer = await file.arrayBuffer();
+      await this.pnp.sp.web
+        .lists.getByTitle('Candidatos')
+        .items.getById(candidatoId)
+        .attachmentFiles.add(file.name, buffer);
+    } catch (e) {
+      console.error('Error adjuntando CV:', e);
+      this.notif.advertencia('El candidato fue guardado pero no se pudo adjuntar la hoja de vida. Intenta subirla desde el visor de documentos.');
+    } finally {
+      this.subiendoCV.set(false);
+    }
+  }
+
   guardar() {
     if (this.form.invalid) return;
     this.guardando.set(true);
@@ -236,7 +330,12 @@ export class CandidatoFormComponent implements OnInit {
       : this.svc.update(this.candidatoId!, data);
 
     obs.subscribe({
-      next: () => {
+      next: async (res) => {
+        // Si es nuevo y hay archivo, adjuntar al ítem recién creado
+        const nuevoId = this.esNuevo ? res?.data?.Id : this.candidatoId;
+        if (nuevoId && this.archivoSeleccionado()) {
+          await this.adjuntarCV(nuevoId);
+        }
         this.notif.exito(this.esNuevo ? 'Candidato registrado' : 'Candidato actualizado');
         this.guardando.set(false);
         this.volver();

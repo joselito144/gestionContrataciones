@@ -14,12 +14,9 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { forkJoin } from 'rxjs';
-import { map, startWith } from 'rxjs/operators';
 import {
-  SolicitudesService,
-  AreasService,
-  PerfilesCargosService,
-  CentroCostosService,
+  SolicitudesService, AreasService,
+  PerfilesCargosService, CentroCostosService,
 } from '../../../core/services/domain';
 import { NotificacionService } from '../../../core/services/notificacion.service';
 import { AuthService } from '../../../core/services/auth.service';
@@ -62,6 +59,7 @@ import {
             <p class="section-title">1. Identificación del requerimiento</p>
             <div class="field-grid">
 
+              <!-- Perfil -->
               <mat-form-field appearance="outline">
                 <mat-label>Perfil / cargo solicitado *</mat-label>
                 <mat-select formControlName="perfilId">
@@ -74,25 +72,33 @@ import {
                 }
               </mat-form-field>
 
-              <!-- Info del perfil seleccionado -->
+              <!-- Info del perfil seleccionado — cambio 4 -->
               @if (perfilSeleccionado()) {
                 <div class="perfil-info full">
-                  <div class="perfil-info-item">
-                    <span class="perfil-lbl">Competencias requeridas</span>
-                    <span class="perfil-val">
-                      {{ perfilSeleccionado()!.ComptenciasRequeridas || '—' }}
-                    </span>
+                  <div class="perfil-info-header">
+                    <mat-icon>work</mat-icon> Información del perfil
                   </div>
-                  <div class="perfil-info-item">
-                    <span class="perfil-lbl">Formación y conocimiento</span>
-                    <span class="perfil-val">
-                      {{ perfilSeleccionado()!.FormacionConocimiento || '—' }}
-                    </span>
+                  <div class="perfil-info-grid">
+                    <div class="perfil-info-item">
+                      <span class="perfil-lbl">Experiencia mínima</span>
+                      <span class="perfil-val">
+                        {{ perfilSeleccionado()!.ExperienciaMinima }}
+                        {{ perfilSeleccionado()!.ExperienciaMinima === 1 ? 'año' : 'años' }}
+                      </span>
+                    </div>
+                    <div class="perfil-info-item">
+                      <span class="perfil-lbl">Competencias requeridas</span>
+                      <span class="perfil-val">{{ perfilSeleccionado()!.ComptenciasRequeridas || '—' }}</span>
+                    </div>
+                    <div class="perfil-info-item">
+                      <span class="perfil-lbl">Formación y conocimiento</span>
+                      <span class="perfil-val">{{ perfilSeleccionado()!.FormacionConocimiento || '—' }}</span>
+                    </div>
                   </div>
                 </div>
               }
 
-              <!-- Área — autocomplete -->
+              <!-- Área autocomplete -->
               <mat-form-field appearance="outline">
                 <mat-label>Área solicitante *</mat-label>
                 <input matInput formControlName="areaBusqueda"
@@ -110,7 +116,7 @@ import {
                 }
               </mat-form-field>
 
-              <!-- Centro de costos — autocomplete -->
+              <!-- Centro de costos autocomplete -->
               <mat-form-field appearance="outline">
                 <mat-label>Centro de costos *</mat-label>
                 <input matInput formControlName="centroBusqueda"
@@ -121,8 +127,8 @@ import {
                   (optionSelected)="onCentroSelected($event.option.value)">
                   @for (c of centrosFiltrados(); track c.Id) {
                     <mat-option [value]="c">
-                      <span class="centro-codigo">{{ c.Title }}</span>
-                      <span class="centro-nombre"> — {{ c.NombreCentroCostos }}</span>
+                      <span style="font-weight:500">{{ c.Title }}</span>
+                      <span style="color:#9BA8B5;font-size:12px"> — {{ c.NombreCentroCostos }}</span>
                     </mat-option>
                   }
                 </mat-autocomplete>
@@ -148,34 +154,41 @@ import {
                 <mat-datepicker-toggle matIconSuffix [for]="picker" />
                 <mat-datepicker #picker />
                 @if (form.get('fechaRequeridaInicio')?.hasError('required') && form.get('fechaRequeridaInicio')?.touched) {
-                  <mat-error>La fecha de inicio es requerida</mat-error>
+                  <mat-error>La fecha es requerida</mat-error>
                 }
               </mat-form-field>
 
               <mat-form-field appearance="outline">
                 <mat-label>Jefe inmediato *</mat-label>
-                <input matInput formControlName="jefeInmediato"
-                  placeholder="Nombre del jefe inmediato" />
+                <input matInput formControlName="jefeInmediato" />
                 @if (form.get('jefeInmediato')?.hasError('required') && form.get('jefeInmediato')?.touched) {
-                  <mat-error>El jefe inmediato es requerido</mat-error>
+                  <mat-error>Campo requerido</mat-error>
                 }
+              </mat-form-field>
+
+              <!-- Campo 5: Ampliar perfil del cargo (opcional) -->
+              <mat-form-field appearance="outline" class="full">
+                <mat-label>Información adicional del perfil del cargo</mat-label>
+                <textarea matInput formControlName="ampliarPerfilCargo" rows="3"
+                  placeholder="Información adicional sobre el perfil buscado que no esté contemplada en el catálogo de cargos (opcional)...">
+                </textarea>
+                <mat-hint>Campo opcional — complementa el perfil estándar del cargo</mat-hint>
               </mat-form-field>
 
             </div>
           </div>
 
-          <!-- SECCIÓN 2: Condiciones del cargo -->
+          <!-- SECCIÓN 2: Condiciones -->
           <div class="card">
             <p class="section-title">2. Condiciones del cargo</p>
             <div class="field-grid">
 
               <mat-form-field appearance="outline">
                 <mat-label>Rango salarial (COP) *</mat-label>
-                <input matInput formControlName="rangoSalario"
-                  placeholder="Ej: 2000000" />
+                <input matInput formControlName="rangoSalario" />
                 <span matPrefix>$&nbsp;</span>
                 @if (form.get('rangoSalario')?.hasError('required') && form.get('rangoSalario')?.touched) {
-                  <mat-error>El rango salarial es requerido</mat-error>
+                  <mat-error>Campo requerido</mat-error>
                 }
               </mat-form-field>
 
@@ -197,8 +210,7 @@ import {
 
               <mat-form-field appearance="outline" class="full">
                 <mat-label>Elementos necesarios para la contratación</mat-label>
-                <textarea matInput formControlName="elementosNecesarios"
-                  rows="2"
+                <textarea matInput formControlName="elementosNecesarios" rows="2"
                   placeholder="EPP, equipos, herramientas, dotación...">
                 </textarea>
               </mat-form-field>
@@ -206,7 +218,7 @@ import {
             </div>
           </div>
 
-          <!-- SECCIÓN 3: Tipo de contrato -->
+          <!-- SECCIÓN 3: Contrato -->
           <div class="card">
             <p class="section-title">3. Tipo de contrato</p>
             <div class="field-grid">
@@ -220,28 +232,27 @@ import {
                 </mat-select>
               </mat-form-field>
 
-              <mat-form-field appearance="outline">
-                <mat-label>Duración *</mat-label>
-                <input matInput type="number" formControlName="duracionContrato" min="1" />
-                @if (form.get('duracionContrato')?.hasError('required') && form.get('duracionContrato')?.touched) {
-                  <mat-error>La duración es requerida</mat-error>
-                }
-              </mat-form-field>
+              <!-- Cambio 6: duración solo si NO es indefinido -->
+              @if (mostrarDuracion()) {
+                <mat-form-field appearance="outline">
+                  <mat-label>Duración *</mat-label>
+                  <input matInput type="number" formControlName="duracionContrato" min="1" />
+                </mat-form-field>
 
-              <mat-form-field appearance="outline">
-                <mat-label>Unidad de duración *</mat-label>
-                <mat-select formControlName="unidadDuracion">
-                  @for (u of unidadesDuracion; track u) {
-                    <mat-option [value]="u">{{ u }}</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Unidad de duración *</mat-label>
+                  <mat-select formControlName="unidadDuracion">
+                    @for (u of unidadesDuracion; track u) {
+                      <mat-option [value]="u">{{ u }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+              }
 
               @if (mostrarObjetoObra()) {
                 <mat-form-field appearance="outline" class="full">
                   <mat-label>Definición del objeto / obra *</mat-label>
-                  <textarea matInput formControlName="definicionObjetoObra"
-                    rows="3"
+                  <textarea matInput formControlName="definicionObjetoObra" rows="3"
                     placeholder="Describe el objeto o la obra contratada...">
                   </textarea>
                 </mat-form-field>
@@ -263,22 +274,17 @@ import {
             </div>
           </div>
 
-          <!-- SECCIÓN 5: Cadena de aprobación -->
+          <!-- SECCIÓN 5: Cadena aprobación — Cambio 2: solo Dir Adm y Gerente -->
           <div class="card">
             <p class="section-title">5. Cadena de aprobación (automática)</p>
             <div class="aprov-chain">
               <div class="aprov-step">
                 <div class="aprov-circle">1</div>
-                <span>Líder del proceso</span>
-              </div>
-              <mat-icon class="aprov-arrow">arrow_forward</mat-icon>
-              <div class="aprov-step">
-                <div class="aprov-circle">2</div>
                 <span>Director Administrativo</span>
               </div>
               <mat-icon class="aprov-arrow">arrow_forward</mat-icon>
               <div class="aprov-step">
-                <div class="aprov-circle">3</div>
+                <div class="aprov-circle">2</div>
                 <span>Gerente</span>
               </div>
               <mat-icon class="aprov-arrow">arrow_forward</mat-icon>
@@ -298,11 +304,8 @@ import {
             <button mat-button type="button" (click)="volver()">Cancelar</button>
             <button mat-flat-button color="primary" type="submit"
               [disabled]="form.invalid || guardando()">
-              @if (guardando()) {
-                <mat-spinner diameter="18" />
-              } @else {
-                <mat-icon>send</mat-icon> Enviar solicitud
-              }
+              @if (guardando()) { <mat-spinner diameter="18" /> }
+              @else { <mat-icon>send</mat-icon> Enviar solicitud }
             </button>
           </div>
 
@@ -314,19 +317,21 @@ import {
     .loading-center { display: flex; justify-content: center; padding: 48px; }
 
     .perfil-info {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
-      background: #E6F1FB; border-radius: 8px;
-      padding: 12px 14px; border: 0.5px solid #B5D4F4;
+      border: 0.5px solid #B5D4F4; border-radius: 8px; padding: 12px 14px;
+      background: #E6F1FB;
     }
+    .perfil-info-header {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; font-weight: 500; color: #185FA5; margin-bottom: 10px;
+    }
+    .perfil-info-header mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .perfil-info-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
     .perfil-info-item { display: flex; flex-direction: column; gap: 3px; }
     .perfil-lbl {
       font-size: 10px; color: #185FA5;
       text-transform: uppercase; letter-spacing: .04em; font-weight: 500;
     }
     .perfil-val { font-size: 12px; color: #1E3A5F; white-space: pre-wrap; }
-
-    .centro-codigo { font-weight: 500; color: #1E3A5F; }
-    .centro-nombre { color: #9BA8B5; font-size: 12px; }
 
     .toggle-field {
       display: flex; flex-direction: column; gap: 8px;
@@ -338,8 +343,7 @@ import {
     .avatar {
       width: 40px; height: 40px; border-radius: 50%;
       background: #1E3A5F; display: flex; align-items: center;
-      justify-content: center; font-size: 14px; font-weight: 500;
-      color: #fff; flex-shrink: 0;
+      justify-content: center; font-size: 14px; font-weight: 500; color: #fff; flex-shrink: 0;
     }
     .user-name  { font-size: 13px; font-weight: 500; color: #1E3A5F; }
     .user-email { font-size: 12px; color: #9BA8B5; }
@@ -357,7 +361,6 @@ import {
     .aprov-circle--pa { background: #EAF3DE; border-color: #1D9E75; color: #3B6D11; }
     .aprov-arrow { color: #D0D8E4; font-size: 18px !important; margin-top: -14px; }
     .aprov-hint  { font-size: 11px; color: #9BA8B5; margin: 0; }
-
     .form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
   `],
 })
@@ -379,10 +382,10 @@ export class LiderSolicitudFormComponent implements OnInit {
   perfilSeleccionado = signal<PerfilCargoItem | null>(null);
   fechaMinima = new Date();
 
-  motivosVacante:   MotivoVacante[]   = ['Creación Cargo','Renuncia','Terminación Contrato','Adición para Obra'];
-  nivelesExcel:     NivelExcel[]      = ['No Aplica','Básica','Intermedia','Avanzada'];
-  tiposContrato:    TipoContrato[]    = ['Término Indefinido','Término Fijo','Obra o Labor','Prestación Servicios','Aprendizaje'];
-  unidadesDuracion: UnidadDuracion[]  = ['Días','Meses','Años'];
+  motivosVacante:   MotivoVacante[]  = ['Creación Cargo','Renuncia','Terminación Contrato','Adición para Obra'];
+  nivelesExcel:     NivelExcel[]     = ['No Aplica','Básica','Intermedia','Avanzada'];
+  tiposContrato:    TipoContrato[]   = ['Término Indefinido','Término Fijo','Obra o Labor','Prestación Servicios','Aprendizaje'];
+  unidadesDuracion: UnidadDuracion[] = ['Días','Meses','Años'];
 
   form = this.fb.group({
     perfilId:             [null as number | null, Validators.required],
@@ -390,50 +393,54 @@ export class LiderSolicitudFormComponent implements OnInit {
     areaId:               [null as number | null, Validators.required],
     centroBusqueda:       [''],
     centroCostoId:        [null as number | null, Validators.required],
-    motivoVacante:        ['' as MotivoVacante,   Validators.required],
-    fechaRequeridaInicio: [null as Date | null,   Validators.required],
+    motivoVacante:        ['' as MotivoVacante, Validators.required],
+    fechaRequeridaInicio: [null as Date | null, Validators.required],
     jefeInmediato:        ['', Validators.required],
+    ampliarPerfilCargo:   [''],   // campo 5, no obligatorio
     rangoSalario:         ['', Validators.required],
     pruebaExcel:          ['No Aplica' as NivelExcel],
     trabajoAlturas:       [false],
     elementosNecesarios:  [''],
-    tipoContrato:         ['' as TipoContrato,    Validators.required],
-    duracionContrato:     [null as number | null, [Validators.required, Validators.min(1)]],
-    unidadDuracion:       ['Meses' as UnidadDuracion, Validators.required],
+    tipoContrato:         ['' as TipoContrato, Validators.required],
+    duracionContrato:     [null as number | null],
+    unidadDuracion:       ['Meses' as UnidadDuracion],
     definicionObjetoObra: [''],
   });
 
-  // Convierte valueChanges en signal para que computed() reaccione
+  // toSignal para que computed() reaccione a cambios del formulario
   private tipoContratoSignal = toSignal(
     this.form.get('tipoContrato')!.valueChanges,
     { initialValue: this.form.get('tipoContrato')!.value }
   );
   private areaBusquedaSignal = toSignal(
-    this.form.get('areaBusqueda')!.valueChanges,
-    { initialValue: '' }
+    this.form.get('areaBusqueda')!.valueChanges, { initialValue: '' }
   );
   private centroBusquedaSignal = toSignal(
-    this.form.get('centroBusqueda')!.valueChanges,
-    { initialValue: '' }
+    this.form.get('centroBusqueda')!.valueChanges, { initialValue: '' }
   );
 
+  // Cambio 6: NO mostrar duración si es Término Indefinido
+  mostrarDuracion = computed(() => {
+    return this.tipoContratoSignal() !== 'Término Indefinido';
+  });
+
   mostrarObjetoObra = computed(() => {
-    const tipo = this.tipoContratoSignal();
-    return tipo === 'Obra o Labor' || tipo === 'Prestación Servicios';
+    const t = this.tipoContratoSignal();
+    return t === 'Obra o Labor' || t === 'Prestación Servicios';
   });
 
   areasFiltradas = computed(() => {
-    const texto = (this.areaBusquedaSignal() ?? '').toLowerCase();
-    if (!texto || typeof texto !== 'string') return this.areas();
-    return this.areas().filter(a => a.Title.toLowerCase().includes(texto));
+    const t = (this.areaBusquedaSignal() ?? '').toLowerCase();
+    if (!t) return this.areas();
+    return this.areas().filter(a => a.Title.toLowerCase().includes(t));
   });
 
   centrosFiltrados = computed(() => {
-    const texto = (this.centroBusquedaSignal() ?? '').toLowerCase();
-    if (!texto || typeof texto !== 'string') return this.centros();
+    const t = (this.centroBusquedaSignal() ?? '').toLowerCase();
+    if (!t) return this.centros();
     return this.centros().filter(c =>
-      c.Title.toLowerCase().includes(texto) ||
-      c.NombreCentroCostos.toLowerCase().includes(texto)
+      c.Title.toLowerCase().includes(t) ||
+      c.NombreCentroCostos.toLowerCase().includes(t)
     );
   });
 
@@ -452,39 +459,30 @@ export class LiderSolicitudFormComponent implements OnInit {
       error: () => { this.notif.error('Error al cargar catálogos'); this.cargando.set(false); },
     });
 
-    // Actualiza el perfil seleccionado al cambiar el select
+    // Actualiza info del perfil al cambiar selección
     this.form.get('perfilId')?.valueChanges.subscribe(id => {
-      const perfil = this.perfiles().find(p => p.Id === id) ?? null;
-      this.perfilSeleccionado.set(perfil);
+      this.perfilSeleccionado.set(this.perfiles().find(p => p.Id === id) ?? null);
     });
 
-    // Limpia objeto/obra si cambia a tipo que no lo requiere
+    // Limpia duración y objeto/obra si cambia tipo
     this.form.get('tipoContrato')?.valueChanges.subscribe(tipo => {
-      if (tipo !== 'Obra o Labor' && tipo !== 'Prestación Servicios') {
-        this.form.get('definicionObjetoObra')?.setValue('');
+      if (tipo === 'Término Indefinido') {
+        this.form.patchValue({ duracionContrato: null, unidadDuracion: 'Meses', definicionObjetoObra: '' });
+      } else if (tipo !== 'Obra o Labor' && tipo !== 'Prestación Servicios') {
+        this.form.patchValue({ definicionObjetoObra: '' });
       }
     });
   }
 
-  displayArea(area: AreaItem | string): string {
-    if (!area) return '';
-    return typeof area === 'string' ? area : area.Title;
+  displayArea(a: AreaItem | string): string {
+    return !a ? '' : typeof a === 'string' ? a : a.Title;
   }
-
-  displayCentro(centro: CentroCostoItem | string): string {
-    if (!centro) return '';
-    return typeof centro === 'string' ? centro : `${centro.Title} — ${centro.NombreCentroCostos}`;
+  displayCentro(c: CentroCostoItem | string): string {
+    return !c ? '' : typeof c === 'string' ? c : `${c.Title} — ${c.NombreCentroCostos}`;
   }
-
-  onAreaSelected(area: AreaItem) {
-    this.form.patchValue({ areaId: area.Id, areaBusqueda: area.Title });
-  }
-
-  onCentroSelected(centro: CentroCostoItem) {
-    this.form.patchValue({
-      centroCostoId: centro.Id,
-      centroBusqueda: `${centro.Title} — ${centro.NombreCentroCostos}`,
-    });
+  onAreaSelected(a: AreaItem)         { this.form.patchValue({ areaId: a.Id, areaBusqueda: a.Title }); }
+  onCentroSelected(c: CentroCostoItem) {
+    this.form.patchValue({ centroCostoId: c.Id, centroBusqueda: `${c.Title} — ${c.NombreCentroCostos}` });
   }
 
   guardar() {
@@ -492,6 +490,7 @@ export class LiderSolicitudFormComponent implements OnInit {
     this.guardando.set(true);
     const v = this.form.value;
     const fecha = v.fechaRequeridaInicio as Date;
+    const esIndefinido = v.tipoContrato === 'Término Indefinido';
 
     this.solicitudesSvc.create({
       Pefil_solicitadoId:     v.perfilId!,
@@ -501,12 +500,13 @@ export class LiderSolicitudFormComponent implements OnInit {
       FechaRequeridaInicio:   fecha.toISOString(),
       JefeInmediato:          v.jefeInmediato!,
       RangoSalario:           v.rangoSalario!,
+      AmpliarPerfilCargo:     v.ampliarPerfilCargo ?? '',
       PruebaExcel:            v.pruebaExcel as NivelExcel,
       TrabajoAlturasVigente:  v.trabajoAlturas ?? false,
       ElementosNecesarios:    v.elementosNecesarios ?? '',
       TipoContrato:           v.tipoContrato!,
-      DuracionContrato:       v.duracionContrato!,
-      UnidadDuracionContrato: v.unidadDuracion!,
+      DuracionContrato:       esIndefinido ? 0 : (v.duracionContrato ?? 0),
+      UnidadDuracionContrato: esIndefinido ? 'Meses' : v.unidadDuracion!,
       DefinicionObjetoObra:   v.definicionObjetoObra ?? '',
       SolicitanteId:          this.auth.usuario()!.id,
     }).subscribe({

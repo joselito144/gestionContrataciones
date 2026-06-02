@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
@@ -10,9 +11,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { FormsModule } from '@angular/forms';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { SolicitudesService, ParticipacionesService } from '../../../core/services/domain';
+import { MatChipsModule } from '@angular/material/chips';
+import { SolicitudesService, ParticipacionesService, PerfilesCargosService } from '../../../core/services/domain';
 import { NotificacionService } from '../../../core/services/notificacion.service';
 import { DocumentViewerService } from '../../../shared/components/document-viewer/document-viewer.service';
 import {
@@ -30,10 +30,10 @@ interface SolicitudConParticipaciones extends SolicitudItem {
   selector: 'app-solicitudes',
   standalone: true,
   imports: [
-    CommonModule, FormsModule, ReactiveFormsModule,
+    CommonModule, ReactiveFormsModule,
     MatFormFieldModule, MatInputModule, MatSelectModule,
     MatButtonModule, MatIconModule, MatProgressSpinnerModule,
-    MatExpansionModule, MatTooltipModule,
+    MatExpansionModule, MatTooltipModule, MatChipsModule,
   ],
   template: `
     <div class="page-container">
@@ -44,7 +44,6 @@ interface SolicitudConParticipaciones extends SolicitudItem {
         </div>
       </div>
 
-      <!-- Filtros -->
       <div class="filtros-bar card">
         <mat-form-field appearance="outline" class="search-field">
           <mat-label>Buscar por perfil o solicitante</mat-label>
@@ -69,8 +68,8 @@ interface SolicitudConParticipaciones extends SolicitudItem {
 
         <mat-accordion multi>
           @for (s of solicitudesFiltradas(); track s.Id) {
-            <mat-expansion-panel class="sol-panel"
-              (opened)="cargarParticipaciones(s)">
+            <mat-expansion-panel
+            (opened)="cargarInfoPerfil(s)">
 
               <mat-expansion-panel-header>
                 <mat-panel-title>
@@ -91,22 +90,14 @@ interface SolicitudConParticipaciones extends SolicitudItem {
 
               <div class="sol-detalle">
 
-                <!-- Cadena de aprobación -->
+                <!-- Cadena aprobación — Cambio 2: solo Dir Adm y Gerente -->
                 <div class="aprov-chain">
-                  <div class="aprov-node" [class.done]="s.Aprobado_Lider">
-                    <div class="aprov-circle">
-                      <mat-icon>{{ s.Aprobado_Lider ? 'check' : 'schedule' }}</mat-icon>
-                    </div>
-                    <span>Líder</span>
-                  </div>
-                  <div class="aprov-arrow">›</div>
-                  <div class="aprov-node"
-                    [class.done]="s.Aprobado_DirAdm"
-                    [class.active]="s.Aprobado_Lider && !s.Aprobado_DirAdm && s.Estado_Aprobacion !== 'Rechazado'">
+                  <div class="aprov-node" [class.done]="s.Aprobado_DirAdm"
+                    [class.active]="!s.Aprobado_DirAdm && s.Estado_Aprobacion === 'Pendiente'">
                     <div class="aprov-circle">
                       <mat-icon>{{ s.Aprobado_DirAdm ? 'check' : 'schedule' }}</mat-icon>
                     </div>
-                    <span>Dir. Adm</span>
+                    <span>Dir. Administrativo</span>
                   </div>
                   <div class="aprov-arrow">›</div>
                   <div class="aprov-node"
@@ -119,22 +110,33 @@ interface SolicitudConParticipaciones extends SolicitudItem {
                   </div>
                 </div>
 
-                <!-- Barra de progreso -->
                 <div class="progress-bar">
                   <div class="fill" [class]="claseBarra(s)"
-                    [style.width.%]="(progreso(s) / 3) * 100">
+                    [style.width.%]="(progreso(s) / 2) * 100">
                   </div>
                 </div>
 
-                <!-- Info de la solicitud -->
+                <!-- Cambio 8: todos los detalles de la solicitud -->
                 <div class="sol-info-grid">
                   <div class="info-item">
-                    <span class="lbl">Motivo</span>
+                    <span class="lbl">Solicitante</span>
+                    <span class="val">{{ s.Solicitante?.Title }}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="lbl">Área</span>
+                    <span class="val">{{ s.AreaSolicitante?.Title }}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="lbl">Centro de costos</span>
+                    <span class="val">{{ s.CentroCosto?.Title }}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="lbl">Motivo vacante</span>
                     <span class="val">{{ s.MotivoVacante }}</span>
                   </div>
                   <div class="info-item">
-                    <span class="lbl">Tipo contrato</span>
-                    <span class="val">{{ s.TipoContrato }}</span>
+                    <span class="lbl">Jefe inmediato</span>
+                    <span class="val">{{ s.JefeInmediato }}</span>
                   </div>
                   <div class="info-item">
                     <span class="lbl">Fecha inicio requerida</span>
@@ -145,37 +147,77 @@ interface SolicitudConParticipaciones extends SolicitudItem {
                     <span class="val">$ {{ s.RangoSalario }} COP</span>
                   </div>
                   <div class="info-item">
-                    <span class="lbl">Jefe inmediato</span>
-                    <span class="val">{{ s.JefeInmediato }}</span>
+                    <span class="lbl">Tipo contrato</span>
+                    <span class="val">{{ s.TipoContrato }}</span>
                   </div>
                   <div class="info-item">
-                    <span class="lbl">Centro de costos</span>
-                    <span class="val">{{ s.CentroCosto?.Title }}</span>
+                    <span class="lbl">Duración</span>
+                    <span class="val">
+                      @if (s.TipoContrato !== 'Término Indefinido' && s.DuracionContrato) {
+                        {{ s.DuracionContrato }} {{ s.UnidadDuracionContrato }}
+                      } @else {
+                        Indefinido
+                      }
+                    </span>
                   </div>
+                  <div class="info-item">
+                    <span class="lbl">Prueba de Excel</span>
+                    <span class="val">{{ s.PruebaExcel }}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="lbl">Trabajo en alturas</span>
+                    <span class="val">{{ s.TrabajoAlturasVigente ? 'Sí requerido' : 'No requerido' }}</span>
+                  </div>
+                  @if (s.DefinicionObjetoObra) {
+                    <div class="info-item full">
+                      <span class="lbl">Definición objeto / obra</span>
+                      <span class="val">{{ s.DefinicionObjetoObra }}</span>
+                    </div>
+                  }
+                  @if (s.ElementosNecesarios) {
+                    <div class="info-item full">
+                      <span class="lbl">Elementos necesarios</span>
+                      <span class="val">{{ s.ElementosNecesarios }}</span>
+                    </div>
+                  }
                 </div>
 
-                <!-- Info del perfil del cargo -->
-                @if (s.Pefil_solicitado?.Cargo) {
-                  <div class="perfil-info">
-                    <div class="perfil-info-title">
-                      <mat-icon>work</mat-icon> Perfil del cargo
+                <!-- Perfil del cargo — Cambio 4: con experiencia mínima -->
+                <div class="perfil-info">
+                  <div class="perfil-info-title">
+                    <mat-icon>work</mat-icon> Perfil del cargo
+                  </div>
+                  <div class="perfil-info-grid">
+                    <div class="perfil-info-item">
+                      <span class="perfil-lbl">Experiencia mínima</span>
+                      <span class="perfil-val">
+                        {{ perfilInfoMap[s.Pefil_solicitado?.Id ?? 0]?.ExperienciaMinima ?? '—' }}
+                        @if (perfilInfoMap[s.Pefil_solicitado?.Id ?? 0]?.ExperienciaMinima) {
+                          {{ perfilInfoMap[s.Pefil_solicitado?.Id ?? 0]?.ExperienciaMinima === 1 ? 'año' : 'años' }}
+                        }
+                      </span>
                     </div>
-                    <div class="perfil-info-grid">
-                      <div class="perfil-info-item">
-                        <span class="perfil-lbl">Competencias requeridas</span>
-                        <span class="perfil-val" id="comp-{{ s.Id }}">
-                          {{ perfilInfoMap[s.Pefil_solicitado!.Id!]?.ComptenciasRequeridas || '—' }}
-                        </span>
-                      </div>
-                      <div class="perfil-info-item">
-                        <span class="perfil-lbl">Formación y conocimiento</span>
-                        <span class="perfil-val">
-                          {{ perfilInfoMap[s.Pefil_solicitado!.Id!]?.FormacionConocimiento || '—' }}
-                        </span>
-                      </div>
+                    <div class="perfil-info-item">
+                      <span class="perfil-lbl">Competencias requeridas</span>
+                      <span class="perfil-val">
+                        {{ perfilInfoMap[s.Pefil_solicitado?.Id ?? 0]?.ComptenciasRequeridas || '—' }}
+                      </span>
+                    </div>
+                    <div class="perfil-info-item">
+                      <span class="perfil-lbl">Formación y conocimiento</span>
+                      <span class="perfil-val">
+                        {{ perfilInfoMap[s.Pefil_solicitado?.Id ?? 0]?.FormacionConocimiento || '—' }}
+                      </span>
                     </div>
                   </div>
-                }
+                  <!-- Cambio 5: AmpliarPerfilCargo -->
+                  @if (s.AmpliarPerfilCargo) {
+                    <div class="perfil-ampliar">
+                      <span class="perfil-lbl">Información adicional del solicitante</span>
+                      <span class="perfil-val">{{ s.AmpliarPerfilCargo }}</span>
+                    </div>
+                  }
+                </div>
 
                 <!-- Documentos -->
                 <div class="sol-docs">
@@ -189,9 +231,7 @@ interface SolicitudConParticipaciones extends SolicitudItem {
                   <mat-expansion-panel class="participaciones-panel">
                     <mat-expansion-panel-header>
                       <mat-panel-title>
-                        <mat-icon style="margin-right:8px;font-size:18px;width:18px;height:18px">
-                          people
-                        </mat-icon>
+                        <mat-icon style="margin-right:8px;font-size:18px;width:18px;height:18px">people</mat-icon>
                         Candidatos vinculados
                         @if (!s.cargandoParticipaciones) {
                           ({{ s.participaciones?.length ?? 0 }})
@@ -208,10 +248,11 @@ interface SolicitudConParticipaciones extends SolicitudItem {
                         @for (p of s.participaciones; track p.Id) {
                           <div class="part-row">
                             <div class="part-avatar">
-                              {{ iniciales(p.Candidato?.Title ?? '') }}
+                              {{ iniciales(nombreCandidato(p)) }}
                             </div>
                             <div class="part-info">
-                              <div class="part-nombre">{{ p.Candidato?.Title }}</div>
+                              <!-- Cambio 7: muestra el nombre correcto -->
+                              <div class="part-nombre">{{ nombreCandidato(p) }}</div>
                               <div class="part-fecha">
                                 Ingresó {{ p.Fecha_Ingreso | date:'dd/MM/yyyy' }}
                               </div>
@@ -304,6 +345,7 @@ interface SolicitudConParticipaciones extends SolicitudItem {
       background: #F4F6F9; border-radius: 8px; padding: 12px;
     }
     .info-item { display: flex; flex-direction: column; gap: 2px; }
+    .info-item.full { grid-column: 1 / -1; }
     .lbl { font-size: 10px; color: #9BA8B5; text-transform: uppercase; letter-spacing: .04em; }
     .val { font-size: 12px; font-weight: 500; color: #1E3A5F; }
 
@@ -312,17 +354,21 @@ interface SolicitudConParticipaciones extends SolicitudItem {
     }
     .perfil-info-title {
       display: flex; align-items: center; gap: 6px;
-      font-size: 12px; font-weight: 500; color: #185FA5;
-      margin-bottom: 10px;
+      font-size: 12px; font-weight: 500; color: #185FA5; margin-bottom: 10px;
     }
     .perfil-info-title mat-icon { font-size: 16px; width: 16px; height: 16px; }
-    .perfil-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .perfil-info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
     .perfil-info-item { display: flex; flex-direction: column; gap: 3px; }
     .perfil-lbl {
       font-size: 10px; color: #185FA5;
       text-transform: uppercase; letter-spacing: .04em; font-weight: 500;
     }
     .perfil-val { font-size: 12px; color: #1E3A5F; white-space: pre-wrap; }
+    .perfil-ampliar {
+      margin-top: 10px; padding-top: 10px;
+      border-top: 0.5px solid #B5D4F4;
+      display: flex; flex-direction: column; gap: 3px;
+    }
 
     .sol-docs { padding-top: 2px; }
 
@@ -358,35 +404,39 @@ interface SolicitudConParticipaciones extends SolicitudItem {
   `],
 })
 export class SolicitudesComponent implements OnInit {
-  private solicitudesSvc   = inject(SolicitudesService);
+  private solicitudesSvc = inject(SolicitudesService);
   private participacionSvc = inject(ParticipacionesService);
-  private notif            = inject(NotificacionService);
-  private router           = inject(Router);
-  private viewer           = inject(DocumentViewerService);
+  private notif = inject(NotificacionService);
+  private router = inject(Router);
+  private viewer = inject(DocumentViewerService);
+  private perfilesSvc = inject(PerfilesCargosService);
 
-  solicitudes  = signal<SolicitudConParticipaciones[]>([]);
-  cargando     = signal(true);
+  solicitudes = signal<SolicitudConParticipaciones[]>([]);
+  cargando = signal(true);
 
-  // FormControls para los filtros — toSignal los convierte en signals reactivos
   ctrlBusqueda = new FormControl('');
-  ctrlEstado   = new FormControl('');
+  ctrlEstado = new FormControl('');
 
   private busquedaSignal = toSignal(this.ctrlBusqueda.valueChanges, { initialValue: '' });
-  private estadoSignal   = toSignal(this.ctrlEstado.valueChanges,   { initialValue: '' });
+  private estadoSignal = toSignal(this.ctrlEstado.valueChanges, { initialValue: '' });
 
-  // Mapa de perfiles cargados para mostrar competencias y formación
-  perfilInfoMap: Record<number, { ComptenciasRequeridas: string; FormacionConocimiento: string }> = {};
+  // Mapa de info de perfiles para mostrar competencias, formación y experiencia
+  perfilInfoMap: Record<number, {
+    ExperienciaMinima: number;
+    ComptenciasRequeridas: string;
+    FormacionConocimiento: string;
+  }> = {};
 
   solicitudesFiltradas = computed(() => {
-    const texto  = (this.busquedaSignal() ?? '').toLowerCase();
+    const texto = (this.busquedaSignal() ?? '').toLowerCase();
     const estado = (this.estadoSignal() ?? '') as EstadoAprobacion | '';
     return this.solicitudes().filter(s => {
-      const matchTexto = !texto ||
+      const t = !texto ||
         s.Pefil_solicitado?.Cargo?.toLowerCase().includes(texto) ||
         s.Solicitante?.Title?.toLowerCase().includes(texto) ||
         s.AreaSolicitante?.Title?.toLowerCase().includes(texto);
-      const matchEstado = !estado || s.Estado_Aprobacion === estado;
-      return matchTexto && matchEstado;
+      const e = !estado || s.Estado_Aprobacion === estado;
+      return t && e;
     });
   });
 
@@ -398,12 +448,14 @@ export class SolicitudesComponent implements OnInit {
           participaciones: [],
           cargandoParticipaciones: false,
         })));
-        // Construye el mapa de info de perfiles para mostrar en la vista
+        // Construye mapa de perfiles incluyendo ExperienciaMinima — Cambio 4
         s.forEach(sol => {
-          if (sol.Pefil_solicitado?.Id) {
-            this.perfilInfoMap[sol.Pefil_solicitado.Id] = {
-              ComptenciasRequeridas: (sol.Pefil_solicitado as any).ComptenciasRequeridas ?? '',
-              FormacionConocimiento: (sol.Pefil_solicitado as any).FormacionConocimiento ?? '',
+          const perfil = sol.Pefil_solicitado as any;
+          if (perfil?.Id) {
+            this.perfilInfoMap[perfil.Id] = {
+              ExperienciaMinima: perfil.ExperienciaMinima ?? 0,
+              ComptenciasRequeridas: perfil.ComptenciasRequeridas ?? '',
+              FormacionConocimiento: perfil.FormacionConocimiento ?? '',
             };
           }
         });
@@ -413,30 +465,32 @@ export class SolicitudesComponent implements OnInit {
     });
   }
 
-  cargarParticipaciones(s: SolicitudConParticipaciones) {
-    if (s.Estado_Aprobacion !== 'Aprobado') return;
-    if (s.participaciones.length > 0)       return;
+  cargarInfoPerfil(s: SolicitudConParticipaciones) {
+    const perfilId = s.Pefil_solicitado?.Id;
+    if (!perfilId || this.perfilInfoMap[perfilId]) return; // ya cargado
 
-    this.solicitudes.update(lista =>
-      lista.map(item => item.Id === s.Id
-        ? { ...item, cargandoParticipaciones: true } : item)
-    );
-
-    this.participacionSvc.getBySolicitud(s.Id).subscribe({
-      next: partic => {
-        this.solicitudes.update(lista =>
-          lista.map(item => item.Id === s.Id
-            ? { ...item, participaciones: partic, cargandoParticipaciones: false } : item)
-        );
+    this.perfilesSvc.getById(perfilId).subscribe({
+      next: p => {
+        this.perfilInfoMap[p.Id] = {
+          ExperienciaMinima: p.ExperienciaMinima,
+          ComptenciasRequeridas: p.ComptenciasRequeridas,
+          FormacionConocimiento: p.FormacionConocimiento,
+        };
+        // Forzar detección de cambios actualizando el signal
+        this.solicitudes.update(lista => [...lista]);
       },
-      error: () => {
-        this.notif.error('Error al cargar candidatos');
-        this.solicitudes.update(lista =>
-          lista.map(item => item.Id === s.Id
-            ? { ...item, cargandoParticipaciones: false } : item)
-        );
-      },
+      error: () => { },
     });
+  }
+
+  // Cambio 7: obtiene el nombre del candidato desde el lookup expandido
+  // SP devuelve el campo Candidato con Title = Nombre_Completo de la lista Candidatos
+  nombreCandidato(p: ParticipacionItem): string {
+    // Intenta Title primero (campo estándar del lookup), luego Nombre_Completo si viene expandido
+    const candidato = p.Candidato as any;
+    return candidato?.Nombre_Completo
+      || candidato?.Title
+      || '(sin nombre)';
   }
 
   vincularCandidato(s: SolicitudItem) {
@@ -458,17 +512,18 @@ export class SolicitudesComponent implements OnInit {
 
   verDocumentosParticipacion(p: ParticipacionItem) {
     this.viewer.abrir(
-      `Participación: ${p.Candidato?.Title}`,
+      `Proceso: ${this.nombreCandidato(p)}`,
       SP_LISTS.PARTICIPACIONES, p.Id
     );
   }
 
+  // Cambio 2: progreso sobre 2 niveles (DirAdm + Gerente)
   progreso(s: SolicitudItem): number {
-    return (s.Aprobado_Lider ? 1 : 0) + (s.Aprobado_DirAdm ? 1 : 0) + (s.Aprobado_Gerente ? 1 : 0);
+    return (s.Aprobado_DirAdm ? 1 : 0) + (s.Aprobado_Gerente ? 1 : 0);
   }
 
   claseBarra(s: SolicitudItem): string {
-    if (s.Estado_Aprobacion === 'Aprobado')  return 'success';
+    if (s.Estado_Aprobacion === 'Aprobado') return 'success';
     if (s.Estado_Aprobacion === 'Rechazado') return 'danger';
     return this.progreso(s) === 0 ? 'warning' : 'info';
   }
@@ -482,7 +537,9 @@ export class SolicitudesComponent implements OnInit {
   }
 
   iniciales(n: string): string {
-    const p = n.trim().split(' ');
-    return p.length >= 2 ? (p[0][0] + p[1][0]).toUpperCase() : n.substring(0, 2).toUpperCase();
+    const p = (n ?? '').trim().split(' ');
+    return p.length >= 2 ? (p[0][0] + p[1][0]).toUpperCase() : (n ?? '??').substring(0, 2).toUpperCase();
   }
+
+
 }
