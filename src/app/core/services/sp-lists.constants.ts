@@ -9,4 +9,5 @@ export const SP_LISTS = {
   PARTICIPACIONES: 'Participaciones',
   OFERTAS:         'Ofertas',
   CONTRATOS:       'Contratos',
+  PI_OFERTAS:      'KPI_Ofertas'
 } as const;

@@ -90,8 +90,8 @@ export interface PerfilCargoCreate {
 
 // ── Solicitudes ───────────────────────────────────────────────────────────────
 export type EstadoAprobacion = 'Pendiente' | 'Aprobado' | 'Rechazado';
-export type NivelExcel       = 'No Aplica' | 'Básica' | 'Intermedia' | 'Avanzada';
-export type MotivoVacante    =
+export type NivelExcel = 'No Aplica' | 'Básica' | 'Intermedia' | 'Avanzada';
+export type MotivoVacante =
   | 'Creación Cargo'
   | 'Renuncia'
   | 'Terminación Contrato'
@@ -132,7 +132,7 @@ export interface SolicitudItem {
   Aprobado_Gerente: boolean;
   Fecha_Aprobacion: string | null;
   Observaciones: string;
-  AmpliarPerfilCargo: string;  
+  AmpliarPerfilCargo: string;
 }
 
 export interface SolicitudCreate {
@@ -228,6 +228,7 @@ export interface OfertaItem {
   Fecha_Envio: string | null;
   Fecha_Respuesta: string | null;
   IP_Aceptacion: string;
+  AplicaKPI: boolean
 }
 
 export interface OfertaCreate {
@@ -236,6 +237,7 @@ export interface OfertaCreate {
   Cargo: string;
   Estado_Oferta: EstadoOferta;
   Aprobada_DirAdm: boolean;
+  AplicaKPI: boolean
 }
 
 // ── Contratos ─────────────────────────────────────────────────────────────────
@@ -268,4 +270,24 @@ export interface UsuarioActual {
   email: string;
   rol: RolApp | null;
   activo: boolean;
+}
+
+export type UnidadPeriodoKPI = 'Mes' | 'Trimestre' | 'Semestre';
+
+export interface KpiOfertaItem {
+  Id: number;
+  ID_OfertaId: number;
+  ID_Oferta: SpLookup;
+  Periodo: number;
+  UnidadPeriodo: UnidadPeriodoKPI;
+  PorcentajeGarantizado: number;
+  ValorKPI: number;
+}
+
+export interface KpiOfertaCreate {
+  ID_OfertaId: number;
+  Periodo: number;
+  UnidadPeriodo: UnidadPeriodoKPI;
+  PorcentajeGarantizado: number;
+  ValorKPI: number;
 }
