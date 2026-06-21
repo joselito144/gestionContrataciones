@@ -1,7 +1,8 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { MatTableModule } from '@angular/material/table';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -9,9 +10,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatChipsModule } from '@angular/material/chips';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { toSignal } from '@angular/core/rxjs-interop';
 import { CandidatosService } from '../../../core/services/domain';
 import { NotificacionService } from '../../../core/services/notificacion.service';
 import { DocumentViewerService } from '../../../shared/components/document-viewer/document-viewer.service';
@@ -22,10 +20,10 @@ import { SP_LISTS } from '../../../core/services/sp-lists.constants';
   selector: 'app-candidatos-list',
   standalone: true,
   imports: [
-    CommonModule, FormsModule, ReactiveFormsModule,
+    CommonModule, ReactiveFormsModule,
     MatTableModule, MatFormFieldModule, MatInputModule,
-    MatButtonModule, MatIconModule, MatProgressSpinnerModule,
-    MatTooltipModule, MatChipsModule,
+    MatButtonModule, MatIconModule,
+    MatProgressSpinnerModule, MatTooltipModule,
   ],
   template: `
     <div class="page-container">
@@ -59,7 +57,6 @@ import { SP_LISTS } from '../../../core/services/sp-lists.constants';
         <div class="table-wrap">
           <table mat-table [dataSource]="candidatosFiltrados()" class="data-table">
 
-            <!-- Columna nombre -->
             <ng-container matColumnDef="nombre">
               <th mat-header-cell *matHeaderCellDef>Candidato</th>
               <td mat-cell *matCellDef="let c">
@@ -73,7 +70,6 @@ import { SP_LISTS } from '../../../core/services/sp-lists.constants';
               </td>
             </ng-container>
 
-            <!-- Columna identificación -->
             <ng-container matColumnDef="identificacion">
               <th mat-header-cell *matHeaderCellDef>Identificación</th>
               <td mat-cell *matCellDef="let c">
@@ -82,30 +78,30 @@ import { SP_LISTS } from '../../../core/services/sp-lists.constants';
               </td>
             </ng-container>
 
-            <!-- Columna teléfono -->
             <ng-container matColumnDef="telefono">
               <th mat-header-cell *matHeaderCellDef>Teléfono</th>
               <td mat-cell *matCellDef="let c" class="text-muted">{{ c.Telefono }}</td>
             </ng-container>
 
-            <!-- Columna acciones -->
             <ng-container matColumnDef="acciones">
               <th mat-header-cell *matHeaderCellDef></th>
               <td mat-cell *matCellDef="let c">
                 <div class="acciones-row">
+                  <!-- Bug fix: stopPropagation en todos los botones para evitar
+                       que el clic suba a la fila y dispare editar() -->
                   <button mat-icon-button color="primary"
                     matTooltip="Editar candidato"
-                    (click)="editar(c)">
+                    (click)="editar(c); $event.stopPropagation()">
                     <mat-icon>edit</mat-icon>
                   </button>
                   <button mat-icon-button color="accent"
                     matTooltip="Ver procesos en los que participa"
-                    (click)="verProcesos(c)">
+                    (click)="verProcesos(c); $event.stopPropagation()">
                     <mat-icon>work_history</mat-icon>
                   </button>
-                  <button mat-icon-button color="primary"
+                  <button mat-icon-button
                     matTooltip="Ver documentos adjuntos (CV, certificados)"
-                    (click)="verDocumentos(c)">
+                    (click)="verDocumentos(c); $event.stopPropagation()">
                     <mat-icon>folder_open</mat-icon>
                   </button>
                 </div>
@@ -113,9 +109,11 @@ import { SP_LISTS } from '../../../core/services/sp-lists.constants';
             </ng-container>
 
             <tr mat-header-row *matHeaderRowDef="columnas; sticky: true"></tr>
+            <!-- La fila completa también llama a editar — los botones detienen el bubbling -->
             <tr mat-row *matRowDef="let row; columns: columnas;"
               class="clickable-row"
-              (click)="editar(row)"></tr>
+              (click)="editar(row)">
+            </tr>
 
           </table>
 
@@ -136,10 +134,8 @@ import { SP_LISTS } from '../../../core/services/sp-lists.constants';
     .filtros-bar   { display: flex; gap: 16px; flex-wrap: wrap; }
     .search-field  { flex: 1; min-width: 200px; }
     .loading-center { display: flex; justify-content: center; padding: 48px; }
-
     .table-wrap { border: 0.5px solid #D0D8E4; border-radius: 12px; overflow: hidden; }
     .data-table { width: 100%; }
-
     .cell-nombre { display: flex; align-items: center; gap: 10px; }
     .avatar-sm {
       width: 34px; height: 34px; border-radius: 50%;
@@ -150,11 +146,9 @@ import { SP_LISTS } from '../../../core/services/sp-lists.constants';
     .nombre  { font-size: 13px; font-weight: 500; color: #1E3A5F; }
     .correo  { font-size: 11px; color: #9BA8B5; }
     .text-muted { color: #9BA8B5; font-size: 13px; }
-
     .acciones-row { display: flex; align-items: center; }
     .clickable-row { cursor: pointer; }
     .clickable-row:hover td { background: #F4F6F9; }
-
     .empty-state {
       text-align: center; padding: 48px; color: #9BA8B5;
       display: flex; flex-direction: column; align-items: center; gap: 12px;
@@ -168,9 +162,9 @@ export class CandidatosListComponent implements OnInit {
   private router = inject(Router);
   private viewer = inject(DocumentViewerService);
 
-  candidatos   = signal<CandidatoItem[]>([]);
-  cargando     = signal(true);
-  columnas     = ['nombre', 'identificacion', 'telefono', 'acciones'];
+  candidatos = signal<CandidatoItem[]>([]);
+  cargando   = signal(true);
+  columnas   = ['nombre', 'identificacion', 'telefono', 'acciones'];
 
   ctrlNombre = new FormControl('');
   ctrlCedula = new FormControl('');
@@ -182,9 +176,9 @@ export class CandidatosListComponent implements OnInit {
     const nombre = (this.nombreSignal() ?? '').toLowerCase();
     const cedula = (this.cedulaSignal() ?? '').toLowerCase();
     return this.candidatos().filter(c => {
-      const mNombre = !nombre || c.Nombre_Completo.toLowerCase().includes(nombre);
-      const mCedula = !cedula || c.NumeroIdentificacion?.toLowerCase().includes(cedula);
-      return mNombre && mCedula;
+      const mN = !nombre || c.Nombre_Completo.toLowerCase().includes(nombre);
+      const mC = !cedula || c.NumeroIdentificacion?.toLowerCase().includes(cedula);
+      return mN && mC;
     });
   });
 
@@ -195,15 +189,17 @@ export class CandidatosListComponent implements OnInit {
     });
   }
 
-  nuevo()                    { this.router.navigate(['/analista/candidatos/nuevo']); }
-  editar(c: CandidatoItem)   { this.router.navigate(['/analista/candidatos', c.Id]); }
+  nuevo()                       { this.router.navigate(['/analista/candidatos/nuevo']); }
+  editar(c: CandidatoItem)      { this.router.navigate(['/analista/candidatos', c.Id]); }
   verProcesos(c: CandidatoItem) { this.router.navigate(['/analista/candidatos', c.Id, 'procesos']); }
   verDocumentos(c: CandidatoItem) {
     this.viewer.abrir(c.Nombre_Completo, SP_LISTS.CANDIDATOS, c.Id);
   }
 
   iniciales(n: string): string {
-    const p = n?.trim().split(' ') ?? [];
-    return p.length >= 2 ? (p[0][0] + p[1][0]).toUpperCase() : (n ?? '??').substring(0, 2).toUpperCase();
+    const p = (n ?? '').trim().split(' ');
+    return p.length >= 2
+      ? (p[0][0] + p[1][0]).toUpperCase()
+      : (n ?? '??').substring(0, 2).toUpperCase();
   }
 }

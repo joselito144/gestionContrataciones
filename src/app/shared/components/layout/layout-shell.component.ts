@@ -87,11 +87,27 @@ export interface NavItem { label: string; icon: string; route: string; }
     .rol-badge { font-size: 10px; color: #B5D4F4; margin-top: 2px; }
 
     mat-nav-list { flex: 1; padding-top: 8px; }
-    a[mat-list-item] { color: #B5D4F4 !important; border-radius: 8px; margin: 2px 8px; }
+    a[mat-list-item] { border-radius: 8px; margin: 2px 8px; }
     a[mat-list-item]:hover { background: rgba(255,255,255,.08) !important; }
-    a[mat-list-item].active-link { background: rgba(55,138,221,.25) !important; color: #fff !important; }
-    a[mat-list-item].active-link mat-icon { color: #378ADD !important; }
+    a[mat-list-item].active-link { background: rgba(55,138,221,.25) !important; }
     mat-icon { color: #B5D4F4; }
+    a[mat-list-item].active-link mat-icon { color: #fff !important; }
+
+    /* FIX: Angular Material envuelve el texto del list-item en spans internos
+       (clases MDC) que traen su propio color por defecto del tema y pisan
+       cualquier "color" puesto sobre el <a> contenedor, sin importar el
+       !important — porque la regla real que pinta el texto vive en el nodo
+       hijo, no en el <a>. Hay que apuntar explícitamente a esos nodos. */
+    a[mat-list-item] .mdc-list-item__primary-text,
+    a[mat-list-item] [matListItemTitle] {
+      color: #B5D4F4 !important;
+    }
+    a[mat-list-item]:hover .mdc-list-item__primary-text,
+    a[mat-list-item]:hover [matListItemTitle],
+    a[mat-list-item].active-link .mdc-list-item__primary-text,
+    a[mat-list-item].active-link [matListItemTitle] {
+      color: #fff !important;
+    }
 
     .sidenav-footer {
       padding: 12px 16px;

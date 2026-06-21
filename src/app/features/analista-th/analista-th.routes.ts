@@ -8,14 +8,12 @@ export const ANALISTA_TH_ROUTES: Routes = [
     children: [
       { path: '', redirectTo: 'solicitudes', pathMatch: 'full' },
 
-      // Solicitudes — vista pipeline (solo lectura para el analista)
       {
         path: 'solicitudes',
         loadComponent: () =>
           import('./solicitudes/solicitudes.component').then(m => m.SolicitudesComponent),
       },
 
-      // Candidatos — catálogo maestro
       {
         path: 'candidatos',
         loadComponent: () =>
@@ -37,28 +35,35 @@ export const ANALISTA_TH_ROUTES: Routes = [
           import('./candidatos/candidato-procesos.component').then(m => m.CandidatoProcesosComponent),
       },
 
-      // Participaciones — vinculación candidato ↔ solicitud
       {
         path: 'participaciones/nueva',
         loadComponent: () =>
           import('./participaciones/participacion-form.component').then(m => m.ParticipacionFormComponent),
       },
-
-      // Carta oferta — desde participación seleccionada
       {
         path: 'participaciones/:id/oferta',
         loadComponent: () =>
           import('./carta-oferta/carta-oferta-form.component').then(m => m.CartaOfertaFormComponent),
       },
 
-      // Perfiles/cargos
+      {
+        path: 'ofertas/:id',
+        loadComponent: () =>
+          import('./ofertas/oferta-detalle.component').then(m => m.OfertaDetalleComponent),
+      },
+
+      // NUEVA — pantalla de inicio del proceso de contratación
+      {
+        path: 'ofertas/:id/contratacion',
+        loadComponent: () =>
+          import('./contratacion/iniciar-contratacion.component').then(m => m.IniciarContratacionComponent),
+      },
+
       {
         path: 'perfiles-cargos',
         loadComponent: () =>
           import('./perfiles-cargos/perfiles-cargos.component').then(m => m.PerfilesCargosComponent),
       },
-
-      // Seguimiento
       {
         path: 'seguimiento',
         loadComponent: () =>

@@ -60,7 +60,6 @@ import {
         <div class="loading-center"><mat-spinner diameter="40" /></div>
       } @else {
 
-        <!-- Resumen del proceso -->
         <div class="card resumen-card">
           <p class="section-title">Resumen del proceso</p>
           <div class="resumen-grid">
@@ -96,38 +95,24 @@ import {
 
         <form [formGroup]="form" (ngSubmit)="guardar()">
 
-          <!-- Condiciones ofertadas -->
           <div class="card">
             <p class="section-title">Condiciones ofertadas</p>
             <div class="field-grid">
-
               <mat-form-field appearance="outline">
                 <mat-label>Cargo ofertado *</mat-label>
                 <input matInput formControlName="cargo" />
-                @if (form.get('cargo')?.hasError('required') && form.get('cargo')?.touched) {
-                  <mat-error>El cargo es requerido</mat-error>
-                }
               </mat-form-field>
-
               <mat-form-field appearance="outline">
                 <mat-label>Salario mensual (COP) *</mat-label>
                 <input matInput type="number" formControlName="salario" min="1" />
                 <span matPrefix>$&nbsp;</span>
-                @if (form.get('salario')?.hasError('min')) {
-                  <mat-error>El salario debe ser mayor a cero</mat-error>
-                }
               </mat-form-field>
-
               <mat-form-field appearance="outline">
                 <mat-label>Fecha de inicio *</mat-label>
                 <input matInput [matDatepicker]="picker" formControlName="fechaInicio" />
                 <mat-datepicker-toggle matIconSuffix [for]="picker" />
                 <mat-datepicker #picker />
-                <mat-hint>
-                  Sugerida: {{ solicitud()?.FechaRequeridaInicio | date:'dd/MM/yyyy' }}
-                </mat-hint>
               </mat-form-field>
-
               <mat-form-field appearance="outline">
                 <mat-label>Tipo de contrato *</mat-label>
                 <mat-select formControlName="tipoContrato">
@@ -138,16 +123,14 @@ import {
                   <mat-option value="Aprendizaje">Aprendizaje</mat-option>
                 </mat-select>
               </mat-form-field>
-
               <mat-form-field appearance="outline" class="full">
                 <mat-label>Observaciones / condiciones adicionales</mat-label>
                 <textarea matInput formControlName="observaciones" rows="3"></textarea>
               </mat-form-field>
-
             </div>
           </div>
 
-          <!-- KPIs — sección dinámica -->
+          <!-- KPIs -->
           <div class="card">
             <div class="kpi-header">
               <p class="section-title" style="margin:0">Cumplimiento por KPI</p>
@@ -158,36 +141,22 @@ import {
 
             @if (form.get('aplicaKPI')?.value) {
               <div class="kpi-body">
-
-                <!-- Valor mensual del KPI -->
                 <mat-form-field appearance="outline" style="width:280px;margin-bottom:16px">
                   <mat-label>Valor mensual del KPI (COP) *</mat-label>
                   <input matInput type="number" formControlName="valorKPI" min="1" />
                   <span matPrefix>$&nbsp;</span>
-                  <mat-hint>Monto total del incentivo por cumplimiento al 100%</mat-hint>
                 </mat-form-field>
 
-                <!-- Tabla de períodos garantizados -->
                 <p class="kpi-sub-title">Períodos de garantía</p>
-                <p class="kpi-sub-hint">
-                  Define el porcentaje garantizado para cada período independientemente del cumplimiento real.
-                </p>
 
                 <table class="kpi-table">
                   <thead>
-                    <tr>
-                      <th>Período N°</th>
-                      <th>Unidad</th>
-                      <th>% Garantizado</th>
-                      <th></th>
-                    </tr>
+                    <tr><th>Período N°</th><th>Unidad</th><th>% Garantizado</th><th></th></tr>
                   </thead>
                   <tbody>
                     @for (periodo of periodosArray.controls; track $index; let i = $index) {
                       <tr [formGroup]="getPeriodoGroup(i)">
-                        <td>
-                          <div class="periodo-num">{{ i + 1 }}</div>
-                        </td>
+                        <td><div class="periodo-num">{{ i + 1 }}</div></td>
                         <td>
                           <mat-form-field appearance="outline" class="td-field">
                             <mat-select formControlName="unidad">
@@ -199,14 +168,12 @@ import {
                         </td>
                         <td>
                           <mat-form-field appearance="outline" class="td-field">
-                            <input matInput type="number" formControlName="porcentaje"
-                              min="0" max="100" placeholder="0 - 100" />
+                            <input matInput type="number" formControlName="porcentaje" min="0" max="100" />
                             <span matSuffix>%</span>
                           </mat-form-field>
                         </td>
                         <td>
                           <button mat-icon-button color="warn" type="button"
-                            matTooltip="Eliminar período"
                             [disabled]="periodosArray.length === 1"
                             (click)="eliminarPeriodo(i)">
                             <mat-icon>delete</mat-icon>
@@ -217,51 +184,13 @@ import {
                   </tbody>
                 </table>
 
-                <button mat-stroked-button type="button"
-                  style="margin-top:12px"
-                  (click)="agregarPeriodo()">
+                <button mat-stroked-button type="button" style="margin-top:12px" (click)="agregarPeriodo()">
                   <mat-icon>add</mat-icon> Agregar período
                 </button>
-
-                <!-- Previsualización tabla de calificación -->
-                <div class="kpi-preview">
-                  <p class="kpi-sub-title">Tabla de calificación de KPI</p>
-                  <table class="kpi-tabla-cal">
-                    <thead>
-                      <tr>
-                        <th>Rango de cumplimiento</th>
-                        <th>Pago del KPI</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td>90% - 100%</td>
-                        <td>Proporcional al cumplimiento</td>
-                      </tr>
-                      <tr>
-                        <td>80% - 89%</td>
-                        <td>80%</td>
-                      </tr>
-                      <tr>
-                        <td>70% - 79%</td>
-                        <td>50%</td>
-                      </tr>
-                      <tr>
-                        <td>Menor al 70%</td>
-                        <td>0%</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                  <p class="kpi-nota">
-                    Esta tabla aplica a partir del período en que el porcentaje garantizado sea 0%.
-                  </p>
-                </div>
-
               </div>
             }
           </div>
 
-          <!-- Flujo -->
           <div class="card info-card">
             <mat-icon>info_outline</mat-icon>
             <div>
@@ -269,10 +198,9 @@ import {
               <ul>
                 <li>Se crea el registro en Ofertas de SharePoint</li>
                 @if (form.get('aplicaKPI')?.value) {
-                  <li>Se guardan {{ periodosArray.length }} período(s) de KPI en la lista KPI_Ofertas</li>
+                  <li>Se guardan {{ periodosArray.length }} período(s) de KPI</li>
                 }
-                <li>Power Automate genera el PDF desde la plantilla Word</li>
-                <li>La oferta pasa a aprobación del Director Administrativo</li>
+                <li>Power Automate genera el PDF y gestiona la aprobación</li>
               </ul>
             </div>
           </div>
@@ -292,41 +220,25 @@ import {
   `,
   styles: [`
     .loading-center { display: flex; justify-content: center; padding: 48px; }
-
     .resumen-card { background: #F4F6F9; }
     .resumen-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
     .resumen-item { display: flex; flex-direction: column; gap: 2px; }
     .lbl { font-size: 11px; color: #9BA8B5; text-transform: uppercase; letter-spacing: .04em; }
     .val { font-size: 13px; font-weight: 500; color: #1E3A5F; }
     .sub { font-size: 11px; color: #9BA8B5; }
-
-    .kpi-header {
-      display: flex; align-items: center;
-      justify-content: space-between; margin-bottom: 16px;
-    }
+    .kpi-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
     .kpi-body { display: flex; flex-direction: column; }
-    .kpi-sub-title {
-      font-size: 12px; font-weight: 500; color: #1E3A5F;
-      margin: 0 0 4px;
-    }
-    .kpi-sub-hint { font-size: 12px; color: #9BA8B5; margin: 0 0 12px; }
-
+    .kpi-sub-title { font-size: 12px; font-weight: 500; color: #1E3A5F; margin: 0 0 4px; }
     .kpi-table {
       width: 100%; border-collapse: collapse;
       border: 0.5px solid #D0D8E4; border-radius: 8px; overflow: hidden;
-      margin-bottom: 4px;
     }
     .kpi-table th {
       background: #F4F6F9; font-size: 11px; font-weight: 500;
-      color: #9BA8B5; text-transform: uppercase; letter-spacing: .04em;
-      padding: 10px 12px; text-align: left;
+      color: #9BA8B5; text-transform: uppercase; padding: 10px 12px; text-align: left;
       border-bottom: 0.5px solid #D0D8E4;
     }
-    .kpi-table td {
-      padding: 6px 12px; border-bottom: 0.5px solid #F4F6F9;
-      vertical-align: middle;
-    }
-    .kpi-table tr:last-child td { border-bottom: none; }
+    .kpi-table td { padding: 6px 12px; border-bottom: 0.5px solid #F4F6F9; vertical-align: middle; }
     .periodo-num {
       width: 28px; height: 28px; border-radius: 50%;
       background: #1E3A5F; color: #fff;
@@ -335,34 +247,10 @@ import {
     }
     .td-field { width: 140px; }
     ::ng-deep .td-field .mat-mdc-form-field-subscript-wrapper { display: none; }
-
-    .kpi-preview { margin-top: 20px; padding-top: 16px; border-top: 0.5px solid #EEF1F5; }
-    .kpi-tabla-cal {
-      width: 100%; border-collapse: collapse;
-      border: 0.5px solid #D0D8E4; border-radius: 6px; overflow: hidden;
-      margin: 8px 0;
-    }
-    .kpi-tabla-cal th {
-      background: #F4F6F9; font-size: 11px; font-weight: 500;
-      color: #9BA8B5; padding: 8px 12px; text-align: left;
-      border-bottom: 0.5px solid #D0D8E4;
-    }
-    .kpi-tabla-cal td {
-      font-size: 12px; color: #1E3A5F;
-      padding: 8px 12px; border-bottom: 0.5px solid #F4F6F9;
-    }
-    .kpi-tabla-cal tr:last-child td { border-bottom: none; }
-    .kpi-nota { font-size: 11px; color: #9BA8B5; margin: 4px 0 0; }
-
-    .info-card {
-      display: flex; gap: 12px;
-      background: #E6F1FB; border-color: #B5D4F4;
-    }
+    .info-card { display: flex; gap: 12px; background: #E6F1FB; border-color: #B5D4F4; }
     .info-card mat-icon { color: #185FA5; flex-shrink: 0; margin-top: 2px; }
     .info-card p  { margin: 0 0 8px; font-size: 13px; color: #1E3A5F; }
     .info-card ul { margin: 0; padding-left: 20px; font-size: 12px; color: #5F6B7A; }
-    .info-card li { margin-bottom: 4px; }
-
     .form-actions { display: flex; justify-content: flex-end; gap: 8px; }
   `],
 })
@@ -392,36 +280,68 @@ export class CartaOfertaFormComponent implements OnInit {
     tipoContrato:  ['', Validators.required],
     observaciones: [''],
     aplicaKPI:     [false],
+    // valorKPI SIN Validators.required aquí — se valida condicionalmente abajo
     valorKPI:      [null as number | null],
     periodos:      this.fb.array([this.crearPeriodoGroup()]),
   });
 
-  get periodosArray(): FormArray {
-    return this.form.get('periodos') as FormArray;
-  }
+  get periodosArray(): FormArray { return this.form.get('periodos') as FormArray; }
+  getPeriodoGroup(i: number): FormGroup { return this.periodosArray.at(i) as FormGroup; }
 
-  getPeriodoGroup(i: number): FormGroup {
-    return this.periodosArray.at(i) as FormGroup;
-  }
-
+  // Los controles del período YA NO tienen Validators.required fijos.
+  // Se activan/desactivan dinámicamente según el estado de aplicaKPI.
   private crearPeriodoGroup(): FormGroup {
     return this.fb.group({
-      unidad:      ['Mes' as UnidadPeriodoKPI, Validators.required],
-      porcentaje:  [null as number | null, [Validators.required, Validators.min(0), Validators.max(100)]],
+      unidad:     ['Mes' as UnidadPeriodoKPI],
+      porcentaje: [null as number | null, [Validators.min(0), Validators.max(100)]],
     });
   }
 
   agregarPeriodo() {
-    this.periodosArray.push(this.crearPeriodoGroup());
+    const nuevo = this.crearPeriodoGroup();
+    if (this.form.get('aplicaKPI')?.value) {
+      this.activarValidacionPeriodo(nuevo);
+    }
+    this.periodosArray.push(nuevo);
   }
 
   eliminarPeriodo(i: number) {
-    if (this.periodosArray.length > 1) {
-      this.periodosArray.removeAt(i);
-    }
+    if (this.periodosArray.length > 1) this.periodosArray.removeAt(i);
+  }
+
+  private activarValidacionPeriodo(grupo: FormGroup) {
+    grupo.get('unidad')?.setValidators([Validators.required]);
+    grupo.get('porcentaje')?.setValidators([Validators.required, Validators.min(0), Validators.max(100)]);
+    grupo.get('unidad')?.updateValueAndValidity();
+    grupo.get('porcentaje')?.updateValueAndValidity();
+  }
+
+  private desactivarValidacionPeriodo(grupo: FormGroup) {
+    grupo.get('unidad')?.clearValidators();
+    grupo.get('porcentaje')?.clearValidators();
+    grupo.get('unidad')?.updateValueAndValidity();
+    grupo.get('porcentaje')?.updateValueAndValidity();
   }
 
   ngOnInit() {
+    // FIX PRINCIPAL: la validación de KPI (valorKPI + cada período) se activa
+    // o desactiva dinámicamente según el toggle "aplicaKPI". Antes, los
+    // validadores quedaban fijos y bloqueaban el formulario aunque el toggle
+    // estuviera apagado, impidiendo generar ofertas sin KPI.
+    this.form.get('aplicaKPI')?.valueChanges.subscribe(aplica => {
+      const valorKPICtrl = this.form.get('valorKPI');
+
+      if (aplica) {
+        valorKPICtrl?.setValidators([Validators.required, Validators.min(1)]);
+        this.periodosArray.controls.forEach(ctrl => this.activarValidacionPeriodo(ctrl as FormGroup));
+      } else {
+        valorKPICtrl?.clearValidators();
+        valorKPICtrl?.setValue(null);
+        this.periodosArray.controls.forEach(ctrl => this.desactivarValidacionPeriodo(ctrl as FormGroup));
+      }
+      valorKPICtrl?.updateValueAndValidity();
+    });
+
     const participacionId = +this.route.snapshot.paramMap.get('id')!;
 
     this.participacionSvc.getById(participacionId).subscribe({
@@ -444,16 +364,10 @@ export class CartaOfertaFormComponent implements OnInit {
             });
             this.cargando.set(false);
           },
-          error: () => {
-            this.notif.error('Error al cargar datos del proceso');
-            this.cargando.set(false);
-          },
+          error: () => { this.notif.error('Error al cargar datos del proceso'); this.cargando.set(false); },
         });
       },
-      error: () => {
-        this.notif.error('Error al cargar la participación');
-        this.cargando.set(false);
-      },
+      error: () => { this.notif.error('Error al cargar la participación'); this.cargando.set(false); },
     });
   }
 
@@ -462,39 +376,43 @@ export class CartaOfertaFormComponent implements OnInit {
     this.guardando.set(true);
     const v = this.form.value;
 
-    // Paso 1 — crear la oferta
-    this.ofertasSvc.create({
+    const ofertaData = {
       ID_ParticipacionId: this.participacion()!.Id,
       Salario_Ofertado:   v.salario!,
       Cargo:              v.cargo!,
-      Estado_Oferta:      'Enviada',
+      Estado_Oferta:      'Enviada' as const,
       Aprobada_DirAdm:    false,
       AplicaKPI:          v.aplicaKPI ?? false,
-    }).subscribe({
+    };
+
+    this.ofertasSvc.create(ofertaData).subscribe({
       next: (res) => {
-        const ofertaId = res?.data?.Id;
+        const ofertaId =
+          res?.data?.Id ?? res?.Id ?? res?.data?.ID ?? res?.ID ?? null;
 
-        // Paso 2 — si aplica KPI, guardar los períodos
-        if (v.aplicaKPI && ofertaId && this.periodosArray.length > 0) {
-          const kpis = this.periodosArray.controls.map((ctrl, i) => ({
-            Periodo:               i + 1,
-            UnidadPeriodo:         ctrl.get('unidad')!.value as UnidadPeriodoKPI,
-            PorcentajeGarantizado: ctrl.get('porcentaje')!.value!,
-            ValorKPI:              v.valorKPI!,
-          }));
-
-          this.kpiSvc.reemplazar(ofertaId, kpis).subscribe({
-            next: () => this.onGuardadoExitoso(),
+        if (!ofertaId) {
+          console.warn('[CartaOferta] No se pudo extraer el Id de la respuesta de create(). Respuesta completa:', res);
+          this.ofertasSvc.getByParticipacion(this.participacion()!.Id).subscribe({
+            next: ofertas => {
+              const ultima = ofertas[0]; // ya viene ordenada por Id descendente
+              if (ultima) {
+                this.guardarKpisYFinalizar(ultima.Id, v);
+              } else {
+                this.notif.advertencia('La oferta se creó pero no se pudo confirmar su Id para guardar los KPI. Verifica en SharePoint.');
+                this.guardando.set(false);
+                this.volver();
+              }
+            },
             error: () => {
-              // La oferta se creó pero los KPI fallaron
-              this.notif.advertencia('Carta oferta creada, pero hubo un error al guardar los KPIs. Verifica en SharePoint.');
+              this.notif.advertencia('La oferta se creó pero no se pudieron guardar los KPI. Verifica en SharePoint.');
               this.guardando.set(false);
-              this.router.navigate(['/analista/candidatos', this.participacion()!.CandidatoId, 'procesos']);
+              this.volver();
             },
           });
-        } else {
-          this.onGuardadoExitoso();
+          return;
         }
+
+        this.guardarKpisYFinalizar(ofertaId, v);
       },
       error: () => {
         this.notif.error('Error al crear la carta oferta');
@@ -503,15 +421,36 @@ export class CartaOfertaFormComponent implements OnInit {
     });
   }
 
+  private guardarKpisYFinalizar(ofertaId: number, v: any) {
+    if (v.aplicaKPI && this.periodosArray.length > 0) {
+      const kpis = this.periodosArray.controls.map((ctrl, i) => ({
+        Periodo:               i + 1,
+        UnidadPeriodo:         ctrl.get('unidad')!.value as UnidadPeriodoKPI,
+        PorcentajeGarantizado: ctrl.get('porcentaje')!.value!,
+        ValorKPI:              v.valorKPI!,
+      }));
+
+      this.kpiSvc.reemplazar(ofertaId, kpis).subscribe({
+        next: () => this.onGuardadoExitoso(),
+        error: (err) => {
+          console.error('[CartaOferta] Error guardando KPIs:', err);
+          this.notif.advertencia('Carta oferta creada, pero hubo un error al guardar los KPIs. Verifica en SharePoint.');
+          this.guardando.set(false);
+          this.volver();
+        },
+      });
+    } else {
+      this.onGuardadoExitoso();
+    }
+  }
+
   private onGuardadoExitoso() {
     this.notif.exito('Carta oferta creada. Power Automate iniciará el proceso de aprobación.');
     this.guardando.set(false);
-    this.router.navigate(['/analista/candidatos',
-      this.participacion()!.CandidatoId, 'procesos']);
+    this.router.navigate(['/analista/candidatos', this.participacion()!.CandidatoId, 'procesos']);
   }
 
   volver() {
-    this.router.navigate(['/analista/candidatos',
-      this.participacion()?.CandidatoId, 'procesos']);
+    this.router.navigate(['/analista/candidatos', this.participacion()?.CandidatoId, 'procesos']);
   }
 }

@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
 import { SharepointBaseService } from '../sharepoint-base.service';
 import { SP_LISTS } from '../sp-lists.constants';
 import {
@@ -13,13 +13,14 @@ import {
   ParticipacionItem, ParticipacionCreate, EstadoParticipacion,
   OfertaItem, OfertaCreate,
   ContratoItem, ContratoCreate,
+  PlantillaDocumentoItem,
 } from '../../../shared/models';
 
 // ── RolesApp ──────────────────────────────────────────────────────────────────
 @Injectable({ providedIn: 'root' })
 export class RolesAppService {
   private sp = inject(SharepointBaseService);
-  private S = ['Id','Rol','Activo','Usuario/Id','Usuario/Title','Usuario/EMail'];
+  private S = ['Id', 'Rol', 'Activo', 'Usuario/Id', 'Usuario/Title', 'Usuario/EMail'];
   private E = ['Usuario'];
 
   getAll(): Observable<RolAppItem[]> {
@@ -43,7 +44,7 @@ export class RolesAppService {
 @Injectable({ providedIn: 'root' })
 export class AprobadoresService {
   private sp = inject(SharepointBaseService);
-  private S = ['Id','Cargo','Orden','Activo','Persona/Id','Persona/Title','Persona/EMail'];
+  private S = ['Id', 'Cargo', 'Orden', 'Activo', 'Persona/Id', 'Persona/Title', 'Persona/EMail'];
   private E = ['Persona'];
 
   getAll(): Observable<AprobadorItem[]> {
@@ -76,7 +77,7 @@ export class AreasService {
 
   getAll(): Observable<AreaItem[]> {
     return this.sp.getAll<AreaItem>(SP_LISTS.AREAS, {
-      select: ['Id','Title','Descripcion'], orderBy: 'Title',
+      select: ['Id', 'Title', 'Descripcion'], orderBy: 'Title',
     });
   }
   create(data: AreaCreate): Observable<any> {
@@ -97,7 +98,7 @@ export class CentroCostosService {
 
   getAll(): Observable<CentroCostoItem[]> {
     return this.sp.getAll<CentroCostoItem>(SP_LISTS.CENTROS_COSTO, {
-      select: ['Id','Title','NombreCentroCostos'], orderBy: 'Title',
+      select: ['Id', 'Title', 'NombreCentroCostos'], orderBy: 'Title',
     });
   }
 }
@@ -106,7 +107,7 @@ export class CentroCostosService {
 @Injectable({ providedIn: 'root' })
 export class PerfilesCargosService {
   private sp = inject(SharepointBaseService);
-  private S = ['Id','Cargo','ExperienciaMinima','ComptenciasRequeridas','FormacionConocimiento'];
+  private S = ['Id', 'Cargo', 'ExperienciaMinima', 'ComptenciasRequeridas', 'FormacionConocimiento'];
 
   getAll(): Observable<PerfilCargoItem[]> {
     return this.sp.getAll<PerfilCargoItem>(SP_LISTS.PERFILES_CARGOS, { select: this.S, orderBy: 'Cargo' });
@@ -130,21 +131,21 @@ export class PerfilesCargosService {
 export class SolicitudesService {
   private sp = inject(SharepointBaseService);
   private S = [
-    'Id','FechaRequeridaInicio','Created',
-    'PruebaExcel','MotivoVacante','Estado_Aprobacion',
-    'Aprobado_Lider','Aprobado_DirAdm','Aprobado_Gerente',
-    'Fecha_Aprobacion','Observaciones',
-    'JefeInmediato','RangoSalario','ElementosNecesarios','AmpliarPerfilCargo',
-    'TrabajoAlturasVigente','TipoContrato','DuracionContrato',
-    'UnidadDuracionContrato','DefinicionObjetoObra',
+    'Id', 'FechaRequeridaInicio', 'Created',
+    'PruebaExcel', 'MotivoVacante', 'Estado_Aprobacion',
+    'Aprobado_Lider', 'Aprobado_DirAdm', 'Aprobado_Gerente',
+    'Fecha_Aprobacion', 'Observaciones',
+    'JefeInmediato', 'RangoSalario', 'ElementosNecesarios', 'AmpliarPerfilCargo',
+    'TrabajoAlturasVigente', 'TipoContrato', 'DuracionContrato',
+    'UnidadDuracionContrato', 'DefinicionObjetoObra',
     // SP REST v1 solo permite Id y el campo título (Cargo) en expand de lookup
     // Los demás campos del perfil se cargan por separado con PerfilesCargosService.getById()
-    'Pefil_solicitado/Id','Pefil_solicitado/Cargo',
-    'Solicitante/Id','Solicitante/Title','Solicitante/EMail',
-    'AreaSolicitante/Id','AreaSolicitante/Title',
-    'CentroCosto/Id','CentroCosto/Title',
+    'Pefil_solicitado/Id', 'Pefil_solicitado/Cargo',
+    'Solicitante/Id', 'Solicitante/Title', 'Solicitante/EMail',
+    'AreaSolicitante/Id', 'AreaSolicitante/Title',
+    'CentroCosto/Id', 'CentroCosto/Title',
   ];
-  private E = ['Solicitante','AreaSolicitante','Pefil_solicitado','CentroCosto'];
+  private E = ['Solicitante', 'AreaSolicitante', 'Pefil_solicitado', 'CentroCosto'];
 
   getAll(): Observable<SolicitudItem[]> {
     return this.sp.getAll<SolicitudItem>(SP_LISTS.SOLICITUDES, {
@@ -173,7 +174,7 @@ export class SolicitudesService {
     return this.sp.create(SP_LISTS.SOLICITUDES, {
       ...data,
       Estado_Aprobacion: 'Pendiente',
-      Aprobado_Lider:  false,
+      Aprobado_Lider: false,
       Aprobado_DirAdm: false,
       Aprobado_Gerente: false,
     });
@@ -191,8 +192,12 @@ export class SolicitudesService {
 export class CandidatosService {
   private sp = inject(SharepointBaseService);
   private S = [
-    'Id','Nombre_Completo','TipoIdentificacion','NumeroIdentificacion',
-    'Correo','Telefono','Direccion','Notas_Analista',
+    'Id', 'Nombre_Completo', 'TipoIdentificacion', 'NumeroIdentificacion',
+    'Correo', 'Telefono', 'Direccion', 'Notas_Analista',
+    'FechaExpedicionDoc', 'CiudadExpedicionDoc',
+    'FechaNacimiento', 'CiudadNacimiento',
+    'EstadoCivil', 'Escolaridad', 'GrupoSanguineo', 'TipoVivienda',
+    'Estrato', 'Barrio', 'EPS', 'Pension', 'NumeroCuenta', 'Banco',
   ];
 
   getAll(): Observable<CandidatoItem[]> {
@@ -206,7 +211,7 @@ export class CandidatosService {
   create(data: CandidatoCreate): Observable<any> {
     return this.sp.create(SP_LISTS.CANDIDATOS, data as any);
   }
-  update(id: number, data: Partial<CandidatoCreate>): Observable<any> {
+  update(id: number, data: Partial<CandidatoItem>): Observable<any> {
     return this.sp.update(SP_LISTS.CANDIDATOS, id, data as any);
   }
 }
@@ -216,12 +221,12 @@ export class CandidatosService {
 export class ParticipacionesService {
   private sp = inject(SharepointBaseService);
   private S = [
-    'Id','Estado','Fecha_Ingreso','Examenes_OK','Notas_Proceso',
-    'CandidatoId','SolicitudId',
-    'Candidato/Id','Candidato/Title',
-    'Solicitud/Id','Solicitud/Title',
+    'Id', 'Estado', 'Fecha_Ingreso', 'Examenes_OK', 'Notas_Proceso',
+    'CandidatoId', 'SolicitudId',
+    'Candidato/Id', 'Candidato/Title', 'Candidato/Nombre_Completo',
+    'Solicitud/Id', 'Solicitud/Title',
   ];
-  private E = ['Candidato','Solicitud'];
+  private E = ['Candidato', 'Solicitud'];
 
   getBySolicitud(solicitudId: number): Observable<ParticipacionItem[]> {
     return this.sp.getAll<ParticipacionItem>(SP_LISTS.PARTICIPACIONES, {
@@ -274,8 +279,9 @@ export class ParticipacionesService {
 export class OfertasService {
   private sp = inject(SharepointBaseService);
   private S = [
-    'Id','Salario_Ofertado','Cargo','PDF_Oferta_URL',
-    'Estado_Oferta','Aprobada_DirAdm','Fecha_Envio','Fecha_Respuesta','IP_Aceptacion',
+    'Id', 'Salario_Ofertado', 'Cargo', 'PDF_Oferta_URL',
+    'Estado_Oferta', 'AplicaKPI', 'Aprobada_DirAdm',
+    'Fecha_Envio', 'Fecha_Respuesta', 'IP_Aceptacion',
     'ID_Participacion/Id',
   ];
   private E = ['ID_Participacion'];
@@ -286,12 +292,35 @@ export class OfertasService {
       orderBy: 'Fecha_Envio', ascending: false,
     });
   }
+
+  // NUEVO: consulta puntual de una oferta por su Id — usado en oferta-detalle.component
+  getById(id: number): Observable<OfertaItem> {
+    return this.sp.getById<OfertaItem>(SP_LISTS.OFERTAS, id, {
+      select: this.S, expand: this.E,
+    });
+  }
+
   getByParticipacion(participacionId: number): Observable<OfertaItem[]> {
     return this.sp.getAll<OfertaItem>(SP_LISTS.OFERTAS, {
       select: this.S, expand: this.E,
       filter: `ID_ParticipacionId eq ${participacionId}`,
+      orderBy: 'Id', ascending: false,
     });
   }
+
+  // NUEVO: trae las ofertas de VARIAS participaciones en una sola consulta.
+  // Evita hacer N peticiones cuando se listan participaciones de una solicitud
+  // o de un candidato. Usado en solicitudes.component y candidato-procesos.component
+  // para mostrar el estado de oferta y prevenir el envío de ofertas duplicadas.
+  getByParticipaciones(participacionIds: number[]): Observable<OfertaItem[]> {
+    if (!participacionIds.length) return of([]);
+    const filtro = participacionIds.map(id => `ID_ParticipacionId eq ${id}`).join(' or ');
+    return this.sp.getAll<OfertaItem>(SP_LISTS.OFERTAS, {
+      select: this.S, expand: this.E,
+      filter: filtro,
+    });
+  }
+
   create(data: OfertaCreate): Observable<any> {
     return this.sp.create(SP_LISTS.OFERTAS, data as any);
   }
@@ -305,9 +334,9 @@ export class OfertasService {
 export class ContratosService {
   private sp = inject(SharepointBaseService);
   private S = [
-    'Id','DocuSign_EnvelopeID','Estado_Firma',
-    'Fecha_Envio_DocuSign','Fecha_Firma_Aspirante','Fecha_Firma_RepLegal',
-    'PDF_Firmado_URL','Certificado_Auditoria','Archivado',
+    'Id', 'DocuSign_EnvelopeID', 'Estado_Firma',
+    'Fecha_Envio_DocuSign', 'Fecha_Firma_Aspirante', 'Fecha_Firma_RepLegal',
+    'PDF_Firmado_URL', 'Certificado_Auditoria', 'Archivado',
     'ID_Oferta/Id',
   ];
   private E = ['ID_Oferta'];
@@ -323,5 +352,44 @@ export class ContratosService {
   }
   update(id: number, data: Partial<ContratoItem>): Observable<any> {
     return this.sp.update(SP_LISTS.CONTRATOS, id, data as any);
+  }
+}
+
+// ── PlantillasDocumento ───────────────────────────────────────────────────────
+@Injectable({ providedIn: 'root' })
+export class PlantillasDocumentoService {
+  private sp = inject(SharepointBaseService);
+  private S = ['Id', 'Title', 'NombreArchivo', 'Activo', 'Orden'];
+
+  getActivas(): Observable<PlantillaDocumentoItem[]> {
+    return this.sp.getAll<PlantillaDocumentoItem>(SP_LISTS.PLANTILLAS_DOCUMENTO, {
+      select:    this.S,
+      filter:    'Activo eq 1',
+      orderBy:   'Orden',
+      ascending: true,
+    });
+  }
+
+  getAll(): Observable<PlantillaDocumentoItem[]> {
+    return this.sp.getAll<PlantillaDocumentoItem>(SP_LISTS.PLANTILLAS_DOCUMENTO, {
+      select:  this.S,
+      orderBy: 'Orden',
+    });
+  }
+
+  create(data: Omit<PlantillaDocumentoItem, 'Id'>): Observable<any> {
+    return this.sp.create(SP_LISTS.PLANTILLAS_DOCUMENTO, data as any);
+  }
+
+  update(id: number, data: Partial<PlantillaDocumentoItem>): Observable<any> {
+    return this.sp.update(SP_LISTS.PLANTILLAS_DOCUMENTO, id, data as any);
+  }
+
+  toggleActivo(id: number, activo: boolean): Observable<any> {
+    return this.sp.update(SP_LISTS.PLANTILLAS_DOCUMENTO, id, { Activo: activo });
+  }
+
+  delete(id: number): Observable<void> {
+    return this.sp.delete(SP_LISTS.PLANTILLAS_DOCUMENTO, id);
   }
 }

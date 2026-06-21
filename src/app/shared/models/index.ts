@@ -4,17 +4,14 @@ export interface SpPersona {
   Title: string;
   EMail: string;
 }
-
 export interface SpLookup {
   Id: number;
   Title?: string;
 }
-
 export interface SpLookupPerfil {
   Id: number;
   Cargo?: string;
 }
-
 export interface CentroCostoItem {
   Id: number;
   Title: string;
@@ -23,7 +20,6 @@ export interface CentroCostoItem {
 
 // ── Roles_App ─────────────────────────────────────────────────────────────────
 export type RolApp = 'AnalistaTH' | 'LiderArea' | 'Administrador';
-
 export interface RolAppItem {
   Id: number;
   Usuario: SpPersona;
@@ -31,7 +27,6 @@ export interface RolAppItem {
   Rol: RolApp;
   Activo: boolean;
 }
-
 export interface RolAppCreate {
   UsuarioId: number;
   Rol: RolApp;
@@ -43,7 +38,6 @@ export type CargoAprobador =
   | 'Líder del Proceso'
   | 'Gerente'
   | 'Director Administrativo y Financiero';
-
 export interface AprobadorItem {
   Id: number;
   Cargo: CargoAprobador;
@@ -52,7 +46,6 @@ export interface AprobadorItem {
   Orden: number;
   Activo: boolean;
 }
-
 export interface AprobadorCreate {
   Cargo: CargoAprobador;
   PersonaId: number;
@@ -66,7 +59,6 @@ export interface AreaItem {
   Title: string;
   Descripcion: string;
 }
-
 export interface AreaCreate {
   Title: string;
   Descripcion: string;
@@ -80,7 +72,6 @@ export interface PerfilCargoItem {
   ComptenciasRequeridas: string;
   FormacionConocimiento: string;
 }
-
 export interface PerfilCargoCreate {
   Cargo: string;
   ExperienciaMinima: number;
@@ -90,8 +81,8 @@ export interface PerfilCargoCreate {
 
 // ── Solicitudes ───────────────────────────────────────────────────────────────
 export type EstadoAprobacion = 'Pendiente' | 'Aprobado' | 'Rechazado';
-export type NivelExcel = 'No Aplica' | 'Básica' | 'Intermedia' | 'Avanzada';
-export type MotivoVacante =
+export type NivelExcel       = 'No Aplica' | 'Básica' | 'Intermedia' | 'Avanzada';
+export type MotivoVacante    =
   | 'Creación Cargo'
   | 'Renuncia'
   | 'Terminación Contrato'
@@ -120,6 +111,7 @@ export interface SolicitudItem {
   MotivoVacante: MotivoVacante;
   JefeInmediato: string;
   RangoSalario: string;
+  AmpliarPerfilCargo: string;
   ElementosNecesarios: string;
   TrabajoAlturasVigente: boolean;
   TipoContrato: TipoContrato;
@@ -132,12 +124,9 @@ export interface SolicitudItem {
   Aprobado_Gerente: boolean;
   Fecha_Aprobacion: string | null;
   Observaciones: string;
-  AmpliarPerfilCargo: string;
 }
-
 export interface SolicitudCreate {
   Pefil_solicitadoId: number;
-  SolicitanteId: number;
   AreaSolicitanteId: number;
   CentroCostoId: number;
   FechaRequeridaInicio: string;
@@ -145,21 +134,73 @@ export interface SolicitudCreate {
   MotivoVacante: MotivoVacante;
   JefeInmediato: string;
   RangoSalario: string;
+  AmpliarPerfilCargo: string;
   ElementosNecesarios: string;
   TrabajoAlturasVigente: boolean;
   TipoContrato: TipoContrato;
   DuracionContrato: number;
   UnidadDuracionContrato: UnidadDuracion;
   DefinicionObjetoObra: string;
-  AmpliarPerfilCargo: string;   // campo 5, no obligatorio — enviar '' si vacío
+  SolicitanteId: number;
 }
 
-// ── Candidatos — datos maestros de la persona ─────────────────────────────────
-// El CV y demás documentos van como adjuntos nativos del ítem en SP.
-// No hay vínculo directo a solicitudes — eso lo maneja Participaciones.
-
+// ── Candidatos ────────────────────────────────────────────────────────────────
 export type TipoIdentificacion = 'CC' | 'CE' | 'PA' | 'NIT' | 'Otro';
+export type EstadoCivil = 'Soltero(a)' | 'Casado(a)' | 'Unión libre' | 'Divorciado(a)' | 'Viudo(a)';
+export type Escolaridad =
+  | 'Primaria'
+  | 'Bachillerato'
+  | 'Técnico'
+  | 'Tecnólogo'
+  | 'Profesional'
+  | 'Especialización'
+  | 'Maestría'
+  | 'Doctorado';
+export type GrupoSanguineo =
+  | 'A+'  | 'A-'
+  | 'B+'  | 'B-'
+  | 'AB+' | 'AB-'
+  | 'O+'  | 'O-';
+export type TipoVivienda = 'Propia' | 'Arrendada' | 'Familiar' | 'Otra';
 
+export type EPS =
+  | 'Sura'
+  | 'Sanitas'
+  | 'Nueva EPS'
+  | 'Compensar'
+  | 'Coomeva'
+  | 'Salud Total'
+  | 'Famisanar'
+  | 'Medimás'
+  | 'Coosalud'
+  | 'Mutual Ser'
+  | 'Otra';
+
+export type FondoPension =
+  | 'Colpensiones'
+  | 'Porvenir'
+  | 'Protección'
+  | 'Colfondos'
+  | 'Old Mutual'
+  | 'Skandia'
+  | 'Otra';
+
+export type Banco =
+  | 'Bancolombia'
+  | 'Banco de Bogotá'
+  | 'Davivienda'
+  | 'BBVA'
+  | 'Banco Popular'
+  | 'Banco de Occidente'
+  | 'Banco AV Villas'
+  | 'Banco Caja Social'
+  | 'Nequi'
+  | 'Daviplata'
+  | 'Scotiabank Colpatria'
+  | 'Itaú'
+  | 'Otro';
+
+// Datos básicos — se capturan al registrar el candidato
 export interface CandidatoItem {
   Id: number;
   Nombre_Completo: string;
@@ -169,8 +210,24 @@ export interface CandidatoItem {
   Telefono: string;
   Direccion: string;
   Notas_Analista: string;
+  // Datos de vinculación — se completan cuando acepta la oferta
+  FechaExpedicionDoc: string | null;
+  CiudadExpedicionDoc: string;
+  FechaNacimiento: string | null;
+  CiudadNacimiento: string;
+  EstadoCivil: EstadoCivil | null;
+  Escolaridad: Escolaridad | null;
+  GrupoSanguineo: GrupoSanguineo | null;
+  TipoVivienda: TipoVivienda | null;
+  Estrato: number | null;
+  Barrio: string;
+  EPS: EPS | null;
+  Pension: FondoPension | null;
+  NumeroCuenta: string;
+  Banco: Banco | null;
 }
 
+// Datos básicos — para registro inicial
 export interface CandidatoCreate {
   Nombre_Completo: string;
   TipoIdentificacion: TipoIdentificacion;
@@ -181,27 +238,37 @@ export interface CandidatoCreate {
   Notas_Analista: string;
 }
 
-// ── Participaciones — intersección Candidato ↔ Solicitud ─────────────────────
-// Representa a un candidato dentro de un proceso de selección específico.
-// Los documentos del proceso (resultados exámenes, etc.) van como adjuntos aquí.
+// Datos de vinculación — complemento tras aceptar oferta
+export interface CandidatoVinculacionUpdate {
+  FechaExpedicionDoc: string;
+  CiudadExpedicionDoc: string;
+  FechaNacimiento: string;
+  CiudadNacimiento: string;
+  EstadoCivil: EstadoCivil;
+  Escolaridad: Escolaridad;
+  GrupoSanguineo: GrupoSanguineo;
+  TipoVivienda: TipoVivienda;
+  Estrato: number;
+  Barrio: string;
+  EPS: EPS;
+  Pension: FondoPension;
+  NumeroCuenta: string;
+  Banco: Banco;
+}
 
-export type EstadoParticipacion =
-  | 'En proceso'
-  | 'Seleccionado'
-  | 'Descartado';
-
+// ── Participaciones ───────────────────────────────────────────────────────────
+export type EstadoParticipacion = 'En proceso' | 'Seleccionado' | 'Descartado';
 export interface ParticipacionItem {
   Id: number;
-  Candidato: SpLookup;           // Title = Nombre_Completo
+  Candidato: SpLookup;
   CandidatoId: number;
-  Solicitud: SpLookup;           // Title = Pefil_solicitado/Cargo
+  Solicitud: SpLookup;
   SolicitudId: number;
   Estado: EstadoParticipacion;
   Fecha_Ingreso: string;
   Examenes_OK: boolean;
-  Notas_Proceso: string;         // observaciones específicas de esta participación
+  Notas_Proceso: string;
 }
-
 export interface ParticipacionCreate {
   CandidatoId: number;
   SolicitudId: number;
@@ -210,12 +277,18 @@ export interface ParticipacionCreate {
   Notas_Proceso: string;
 }
 
+// ── PlantillasDocumento ───────────────────────────────────────────────────────
+// Lista SP que define qué documentos se generan y firman en el proceso
+export interface PlantillaDocumentoItem {
+  Id: number;
+  Title: string;           // nombre del documento, ej: "Contrato término fijo"
+  NombreArchivo: string;   // nombre de la plantilla, ej: "contrato_termino_fijo_template.docx"
+  Activo: boolean;
+  Orden: number;           // orden en que se muestran / firman
+}
+
 // ── Ofertas ───────────────────────────────────────────────────────────────────
-// ID_Participacion reemplaza a ID_Candidato — la oferta es para una
-// participación específica (candidato + solicitud), no para el candidato genérico.
-
 export type EstadoOferta = 'Enviada' | 'Aceptada' | 'Rechazada' | 'Vencida';
-
 export interface OfertaItem {
   Id: number;
   ID_ParticipacionId: number;
@@ -224,25 +297,42 @@ export interface OfertaItem {
   Cargo: string;
   PDF_Oferta_URL: { Url: string; Description: string } | null;
   Estado_Oferta: EstadoOferta;
+  AplicaKPI: boolean;
   Aprobada_DirAdm: boolean;
   Fecha_Envio: string | null;
   Fecha_Respuesta: string | null;
   IP_Aceptacion: string;
-  AplicaKPI: boolean
 }
-
 export interface OfertaCreate {
   ID_ParticipacionId: number;
   Salario_Ofertado: number;
   Cargo: string;
   Estado_Oferta: EstadoOferta;
+  AplicaKPI: boolean;
   Aprobada_DirAdm: boolean;
-  AplicaKPI: boolean
+}
+
+// ── KPI Ofertas ───────────────────────────────────────────────────────────────
+export type UnidadPeriodoKPI = 'Mes' | 'Trimestre' | 'Semestre';
+export interface KpiOfertaItem {
+  Id: number;
+  ID_OfertaId: number;
+  ID_Oferta: SpLookup;
+  Periodo: number;
+  UnidadPeriodo: UnidadPeriodoKPI;
+  PorcentajeGarantizado: number;
+  ValorKPI: number;
+}
+export interface KpiOfertaCreate {
+  ID_OfertaId: number;
+  Periodo: number;
+  UnidadPeriodo: UnidadPeriodoKPI;
+  PorcentajeGarantizado: number;
+  ValorKPI: number;
 }
 
 // ── Contratos ─────────────────────────────────────────────────────────────────
 export type EstadoFirma = 'Pendiente' | 'Firmado_Asp' | 'Completado' | 'Error';
-
 export interface ContratoItem {
   Id: number;
   ID_OfertaId: number;
@@ -256,7 +346,6 @@ export interface ContratoItem {
   Certificado_Auditoria: { Url: string; Description: string } | null;
   Archivado: boolean;
 }
-
 export interface ContratoCreate {
   ID_OfertaId: number;
   DocuSign_EnvelopeID: string;
@@ -270,24 +359,4 @@ export interface UsuarioActual {
   email: string;
   rol: RolApp | null;
   activo: boolean;
-}
-
-export type UnidadPeriodoKPI = 'Mes' | 'Trimestre' | 'Semestre';
-
-export interface KpiOfertaItem {
-  Id: number;
-  ID_OfertaId: number;
-  ID_Oferta: SpLookup;
-  Periodo: number;
-  UnidadPeriodo: UnidadPeriodoKPI;
-  PorcentajeGarantizado: number;
-  ValorKPI: number;
-}
-
-export interface KpiOfertaCreate {
-  ID_OfertaId: number;
-  Periodo: number;
-  UnidadPeriodo: UnidadPeriodoKPI;
-  PorcentajeGarantizado: number;
-  ValorKPI: number;
 }
