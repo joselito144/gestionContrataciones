@@ -14,6 +14,7 @@ import {
   OfertaItem, OfertaCreate,
   ContratoItem, ContratoCreate,
   PlantillaDocumentoItem,
+  ContratacionItem, ContratacionCreate, EstadoContratacion,
 } from '../../../shared/models';
 
 // ── RolesApp ──────────────────────────────────────────────────────────────────
@@ -391,5 +392,58 @@ export class PlantillasDocumentoService {
 
   delete(id: number): Observable<void> {
     return this.sp.delete(SP_LISTS.PLANTILLAS_DOCUMENTO, id);
+  }
+}
+
+// ── Contrataciones ────────────────────────────────────────────────────────────
+@Injectable({ providedIn: 'root' })
+export class ContratacionesService {
+  private sp = inject(SharepointBaseService);
+  private S = [
+    'Id', 'DocumentosAdicionales', 'Estado_Contratacion',
+    'AdobeSign_AgreementID',
+    'Fecha_Inicio', 'Fecha_Envio_Firma',
+    'Fecha_Firma_Aspirante', 'Fecha_Firma_RepLegal',
+    'IP_Firma_Aspirante', 'IP_Firma_RepLegal',
+    'PDF_Contrato_Combinado_URL', 'Certificado_Auditoria_URL',
+    'Notas',
+    'ID_Oferta/Id',
+  ];
+  private E = ['ID_Oferta'];
+
+  getById(id: number): Observable<ContratacionItem> {
+    return this.sp.getById<ContratacionItem>(SP_LISTS.CONTRATACIONES, id, {
+      select: this.S, expand: this.E,
+    });
+  }
+
+  getByOferta(ofertaId: number): Observable<ContratacionItem[]> {
+    return this.sp.getAll<ContratacionItem>(SP_LISTS.CONTRATACIONES, {
+      select: this.S, expand: this.E,
+      filter: `ID_OfertaId eq ${ofertaId}`,
+      orderBy: 'Id', ascending: false,
+    });
+  }
+
+  // Útil para prevenir iniciar dos veces el proceso de contratación
+  // para la misma oferta (igual patrón que getByParticipaciones en Ofertas)
+  existeContratacion(ofertaId: number): Observable<ContratacionItem[]> {
+    return this.sp.getAll<ContratacionItem>(SP_LISTS.CONTRATACIONES, {
+      select: ['Id', 'Estado_Contratacion'],
+      filter: `ID_OfertaId eq ${ofertaId}`,
+      top: 1,
+    });
+  }
+
+  create(data: ContratacionCreate): Observable<any> {
+    return this.sp.create(SP_LISTS.CONTRATACIONES, data as any);
+  }
+
+  update(id: number, data: Partial<ContratacionItem>): Observable<any> {
+    return this.sp.update(SP_LISTS.CONTRATACIONES, id, data as any);
+  }
+
+  cambiarEstado(id: number, estado: EstadoContratacion): Observable<any> {
+    return this.sp.update(SP_LISTS.CONTRATACIONES, id, { Estado_Contratacion: estado });
   }
 }

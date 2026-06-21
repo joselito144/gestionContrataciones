@@ -11,12 +11,14 @@ import {
     ParticipacionesService,
     SolicitudesService,
     CandidatosService,
+    ContratacionesService,
 } from '../../../core/services/domain';
 import { KpiOfertasService } from '../../../core/services/domain/kpi-ofertas.service';
 import { NotificacionService } from '../../../core/services/notificacion.service';
 import { DocumentViewerService } from '../../../shared/components/document-viewer/document-viewer.service';
 import {
     OfertaItem, ParticipacionItem, SolicitudItem, CandidatoItem, KpiOfertaItem,
+    ContratacionItem,
 } from '../../../shared/models';
 import { SP_LISTS } from '../../../core/services/sp-lists.constants';
 
@@ -124,20 +126,42 @@ import { SP_LISTS } from '../../../core/services/sp-lists.constants';
           </div>
         </div>
 
-        <!-- Aviso + acción: oferta aceptada → iniciar contratación -->
+        <!-- Aviso + acción: oferta aceptada → iniciar o ver contratación -->
         @if (oferta()!.Estado_Oferta === 'Aceptada') {
-          <div class="card aceptada-card">
-            <div class="aceptada-info">
-              <mat-icon>check_circle</mat-icon>
-              <div>
-                <p><strong>Oferta aceptada por el candidato</strong></p>
-                <p class="hint">Ya puedes iniciar el proceso de contratación y firma de documentos.</p>
+          @if (contratacion()) {
+            <!-- Ya existe un proceso de contratación en curso -->
+            <div class="card contratacion-card">
+              <div class="contratacion-info">
+                <mat-icon>sync</mat-icon>
+                <div>
+                  <p><strong>Proceso de contratación en curso</strong></p>
+                  <p class="hint">
+                    Estado: <strong>{{ etiquetaEstadoContratacion(contratacion()!.Estado_Contratacion) }}</strong>
+                    @if (contratacion()!.Fecha_Inicio) {
+                      · Iniciado el {{ contratacion()!.Fecha_Inicio | date:'dd/MM/yyyy HH:mm' }}
+                    }
+                  </p>
+                </div>
               </div>
+              <button mat-stroked-button color="primary" (click)="irAContratacion()">
+                <mat-icon>visibility</mat-icon> Ver contratación
+              </button>
             </div>
-            <button mat-flat-button color="primary" (click)="irAContratacion()">
-              <mat-icon>arrow_forward</mat-icon> Iniciar contratación
-            </button>
-          </div>
+          } @else {
+            <!-- Aún no se ha iniciado -->
+            <div class="card aceptada-card">
+              <div class="aceptada-info">
+                <mat-icon>check_circle</mat-icon>
+                <div>
+                  <p><strong>Oferta aceptada por el candidato</strong></p>
+                  <p class="hint">Ya puedes iniciar el proceso de contratación y firma de documentos.</p>
+                </div>
+              </div>
+              <button mat-flat-button color="primary" (click)="irAContratacion()">
+                <mat-icon>arrow_forward</mat-icon> Iniciar contratación
+              </button>
+            </div>
+          }
         }
 
         <!-- KPIs -->
@@ -202,6 +226,15 @@ import { SP_LISTS } from '../../../core/services/sp-lists.constants';
     .aceptada-info p { margin: 0 0 4px; font-size: 13px; color: #1E3A5F; }
     .aceptada-info .hint { font-size: 12px; color: #5F6B7A; margin: 0; }
 
+    .contratacion-card {
+      display: flex; align-items: center; justify-content: space-between;
+      background: #E6F1FB; border-color: #B5D4F4; flex-wrap: wrap; gap: 12px;
+    }
+    .contratacion-info { display: flex; align-items: flex-start; gap: 10px; }
+    .contratacion-info mat-icon { color: #185FA5; flex-shrink: 0; margin-top: 2px; }
+    .contratacion-info p { margin: 0 0 4px; font-size: 13px; color: #1E3A5F; }
+    .contratacion-info .hint { font-size: 12px; color: #5F6B7A; margin: 0; }
+
     .kpi-table {
       width: 100%; border-collapse: collapse;
       border: 0.5px solid #D0D8E4; border-radius: 8px; overflow: hidden;
@@ -237,6 +270,7 @@ export class OfertaDetalleComponent implements OnInit {
     private solicitudesSvc = inject(SolicitudesService);
     private candidatosSvc = inject(CandidatosService);
     private kpiSvc = inject(KpiOfertasService);
+    private contratacionesSvc = inject(ContratacionesService);
     private notif = inject(NotificacionService);
     private router = inject(Router);
     private route = inject(ActivatedRoute);
@@ -248,6 +282,7 @@ export class OfertaDetalleComponent implements OnInit {
     solicitud = signal<SolicitudItem | null>(null);
     candidato = signal<CandidatoItem | null>(null);
     kpis = signal<KpiOfertaItem[]>([]);
+    contratacion = signal<ContratacionItem | null>(null);
 
     ngOnInit() {
         const ofertaId = +this.route.snapshot.paramMap.get('id')!;
@@ -276,11 +311,16 @@ export class OfertaDetalleComponent implements OnInit {
                             kpis: oferta.AplicaKPI
                                 ? this.kpiSvc.getByOferta(oferta.Id)
                                 : of([]),
+                            // Si la oferta está aceptada, verifica si ya existe contratación
+                            contrataciones: oferta.Estado_Oferta === 'Aceptada'
+                                ? this.contratacionesSvc.getByOferta(oferta.Id)
+                                : of([]),
                         }).subscribe({
-                            next: ({ solicitud, candidato, kpis }) => {
+                            next: ({ solicitud, candidato, kpis, contrataciones }) => {
                                 this.solicitud.set(solicitud);
                                 this.candidato.set(candidato);
                                 this.kpis.set(kpis ?? []);
+                                this.contratacion.set(contrataciones?.[0] ?? null);
                                 this.cargando.set(false);
                             },
                             error: () => {
@@ -310,6 +350,17 @@ export class OfertaDetalleComponent implements OnInit {
     irAContratacion() {
         if (!this.oferta()) return;
         this.router.navigate(['/analista/ofertas', this.oferta()!.Id, 'contratacion']);
+    }
+
+    etiquetaEstadoContratacion(estado: string): string {
+        return {
+            Iniciado:               'Iniciado',
+            Generando_Documentos:   'Generando documentos',
+            Enviado_Firma:          'Enviado a firma',
+            Firmado_Aspirante:      'Firmado por el aspirante',
+            Completado:             'Completado',
+            Error:                  'Error en el proceso',
+        }[estado] ?? estado;
     }
 
     badgeEstado(e: string): string {

@@ -81,8 +81,8 @@ export interface PerfilCargoCreate {
 
 // ── Solicitudes ───────────────────────────────────────────────────────────────
 export type EstadoAprobacion = 'Pendiente' | 'Aprobado' | 'Rechazado';
-export type NivelExcel       = 'No Aplica' | 'Básica' | 'Intermedia' | 'Avanzada';
-export type MotivoVacante    =
+export type NivelExcel = 'No Aplica' | 'Básica' | 'Intermedia' | 'Avanzada';
+export type MotivoVacante =
   | 'Creación Cargo'
   | 'Renuncia'
   | 'Terminación Contrato'
@@ -124,6 +124,8 @@ export interface SolicitudItem {
   Aprobado_Gerente: boolean;
   Fecha_Aprobacion: string | null;
   Observaciones: string;
+  Proceso_Finalizado: boolean;
+  Fecha_Finalizacion: string | null;
 }
 export interface SolicitudCreate {
   Pefil_solicitadoId: number;
@@ -157,10 +159,10 @@ export type Escolaridad =
   | 'Maestría'
   | 'Doctorado';
 export type GrupoSanguineo =
-  | 'A+'  | 'A-'
-  | 'B+'  | 'B-'
+  | 'A+' | 'A-'
+  | 'B+' | 'B-'
   | 'AB+' | 'AB-'
-  | 'O+'  | 'O-';
+  | 'O+' | 'O-';
 export type TipoVivienda = 'Propia' | 'Arrendada' | 'Familiar' | 'Otra';
 
 export type EPS =
@@ -359,4 +361,39 @@ export interface UsuarioActual {
   email: string;
   rol: RolApp | null;
   activo: boolean;
+}
+
+
+export type EstadoContratacion =
+  | 'Iniciado'
+  | 'Generando_Documentos'
+  | 'Enviado_Firma'
+  | 'Firmado_Aspirante'
+  | 'Completado'
+  | 'Error';
+
+export interface ContratacionItem {
+  Id: number;
+  ID_OfertaId: number;
+  ID_Oferta: SpLookup;
+  DocumentosAdicionales: string[];   // Choice múltiple → array de Title de PlantillasDocumento
+  Estado_Contratacion: EstadoContratacion;
+  AdobeSign_AgreementID: string;
+  Fecha_Inicio: string;
+  Fecha_Envio_Firma: string | null;
+  Fecha_Firma_Aspirante: string | null;
+  Fecha_Firma_RepLegal: string | null;
+  IP_Firma_Aspirante: string;
+  IP_Firma_RepLegal: string;
+  PDF_Contrato_Combinado_URL: { Url: string; Description: string } | null;
+  Certificado_Auditoria_URL: { Url: string; Description: string } | null;
+  Notas: string;
+}
+
+export interface ContratacionCreate {
+  ID_OfertaId: number;
+  DocumentosAdicionales: string[];
+  Estado_Contratacion: EstadoContratacion;
+  Fecha_Inicio: string;
+  Notas: string;
 }

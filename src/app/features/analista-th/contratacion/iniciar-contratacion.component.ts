@@ -6,6 +6,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import {
   OfertasService,
@@ -13,15 +16,15 @@ import {
   CandidatosService,
   SolicitudesService,
   PlantillasDocumentoService,
+  ContratacionesService,
 } from '../../../core/services/domain';
 import { NotificacionService } from '../../../core/services/notificacion.service';
 import {
-  OfertaItem, ParticipacionItem, CandidatoItem, SolicitudItem, PlantillaDocumentoItem,
+  OfertaItem, ParticipacionItem, CandidatoItem, SolicitudItem,
+  PlantillaDocumentoItem, ContratacionItem,
 } from '../../../shared/models';
 
 // ── Validación de campos requeridos del candidato ─────────────────────────────
-// Lista de campos que deben estar diligenciados antes de iniciar contratación.
-// Cada entrada define la clave del campo en CandidatoItem y su etiqueta visible.
 const CAMPOS_REQUERIDOS: { campo: keyof CandidatoItem; etiqueta: string }[] = [
   { campo: 'FechaExpedicionDoc',  etiqueta: 'Fecha de expedición del documento' },
   { campo: 'CiudadExpedicionDoc', etiqueta: 'Ciudad de expedición del documento' },
@@ -39,16 +42,15 @@ const CAMPOS_REQUERIDOS: { campo: keyof CandidatoItem; etiqueta: string }[] = [
   { campo: 'Banco',               etiqueta: 'Banco' },
 ];
 
-interface CampoFaltante {
-  etiqueta: string;
-}
+interface CampoFaltante { etiqueta: string; }
 
 @Component({
   selector: 'app-iniciar-contratacion',
   standalone: true,
   imports: [
-    CommonModule, MatButtonModule, MatIconModule,
+    CommonModule, FormsModule, MatButtonModule, MatIconModule,
     MatProgressSpinnerModule, MatCheckboxModule, MatTooltipModule,
+    MatFormFieldModule, MatInputModule,
   ],
   template: `
     <div class="page-container">
@@ -84,6 +86,23 @@ interface CampoFaltante {
             </p>
           </div>
         </div>
+      } @else if (contratacionExistente()) {
+        <!-- Ya existe un proceso de contratación para esta oferta -->
+        <div class="card aviso-card aviso-info">
+          <mat-icon>info</mat-icon>
+          <div>
+            <p><strong>El proceso de contratación ya fue iniciado</strong></p>
+            <p class="hint">
+              Estado actual: <strong>{{ etiquetaEstado(contratacionExistente()!.Estado_Contratacion) }}</strong>.
+              No es posible iniciar el proceso nuevamente para esta oferta.
+            </p>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button mat-flat-button color="primary" (click)="volver()">
+            <mat-icon>arrow_back</mat-icon> Volver al detalle de la oferta
+          </button>
+        </div>
       } @else {
 
         <!-- Resumen -->
@@ -101,9 +120,7 @@ interface CampoFaltante {
             </div>
             <div class="resumen-item">
               <span class="lbl">Estado de la oferta</span>
-              <span class="val">
-                <mat-icon class="icon-ok">check_circle</mat-icon> Aceptada
-              </span>
+              <span class="val"><mat-icon class="icon-ok">check_circle</mat-icon> Aceptada</span>
             </div>
           </div>
         </div>
@@ -121,15 +138,10 @@ interface CampoFaltante {
             <div class="validacion-error">
               <div class="validacion-error-header">
                 <mat-icon>error_outline</mat-icon>
-                <p>
-                  Faltan {{ camposFaltantes().length }} campo(s) por diligenciar antes de
-                  continuar con la contratación.
-                </p>
+                <p>Faltan {{ camposFaltantes().length }} campo(s) por diligenciar antes de continuar.</p>
               </div>
               <ul class="campos-faltantes-list">
-                @for (c of camposFaltantes(); track c.etiqueta) {
-                  <li>{{ c.etiqueta }}</li>
-                }
+                @for (c of camposFaltantes(); track c.etiqueta) { <li>{{ c.etiqueta }}</li> }
               </ul>
               <button mat-flat-button color="primary" (click)="irACompletarCandidato()">
                 <mat-icon>edit</mat-icon> Completar información del candidato
@@ -172,27 +184,30 @@ interface CampoFaltante {
           }
         </div>
 
-        <!-- Acción final -->
-        <div class="card info-card">
-          <mat-icon>construction</mat-icon>
-          <div>
-            <p><strong>Disparo del proceso en construcción</strong></p>
-            <p class="hint">
-              La integración con Power Automate para generar y enviar los documentos
-              a firma está pendiente de implementación. Por ahora puedes validar la
-              información y seleccionar los documentos, pero el botón de inicio aún
-              no ejecuta ninguna acción.
-            </p>
-          </div>
+        <!-- Notas opcionales -->
+        <div class="card" [class.card-disabled]="camposFaltantes().length > 0">
+          <p class="section-title">3. Observaciones (opcional)</p>
+          <mat-form-field appearance="outline" style="width:100%">
+            <mat-label>Notas para el proceso de contratación</mat-label>
+            <textarea matInput rows="3" [(ngModel)]="notas"
+              [disabled]="camposFaltantes().length > 0"
+              placeholder="Información adicional relevante para esta contratación...">
+            </textarea>
+          </mat-form-field>
         </div>
 
+
         <div class="form-actions">
-          <button mat-button type="button" (click)="volver()">Volver</button>
+          <button mat-button type="button" (click)="volver()">Cancelar</button>
           <button mat-flat-button color="primary"
-            matTooltip="Funcionalidad en construcción"
-            [disabled]="true">
-            <mat-icon>send</mat-icon>
-            Iniciar proceso de firma ({{ plantillasSeleccionadas().size + 1 }} documento(s))
+            [disabled]="camposFaltantes().length > 0 || enviando()"
+            (click)="iniciarProceso()">
+            @if (enviando()) {
+              <mat-spinner diameter="18" />
+            } @else {
+              <mat-icon>send</mat-icon>
+              Iniciar proceso de firma ({{ plantillasSeleccionadas().size + 1 }} documento(s))
+            }
           </button>
         </div>
 
@@ -216,6 +231,8 @@ interface CampoFaltante {
     .aviso-card { display: flex; gap: 12px; align-items: flex-start; }
     .aviso-warning { background: #FAEEDA; border-color: #E0B468; }
     .aviso-warning mat-icon { color: #BA7517; flex-shrink: 0; }
+    .aviso-info { background: #E6F1FB; border-color: #B5D4F4; }
+    .aviso-info mat-icon { color: #185FA5; flex-shrink: 0; }
     .aviso-card p { margin: 0 0 4px; font-size: 13px; color: #1E3A5F; }
     .aviso-card .hint { font-size: 12px; color: #5F6B7A; margin: 0; }
 
@@ -234,10 +251,7 @@ interface CampoFaltante {
     .validacion-error-header { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
     .validacion-error-header mat-icon { color: #A32D2D; flex-shrink: 0; }
     .validacion-error-header p { margin: 0; font-size: 13px; color: #A32D2D; }
-    .campos-faltantes-list {
-      margin: 0 0 14px; padding-left: 38px;
-      font-size: 12px; color: #5F6B7A;
-    }
+    .campos-faltantes-list { margin: 0 0 14px; padding-left: 38px; font-size: 12px; color: #5F6B7A; }
     .campos-faltantes-list li { margin-bottom: 3px; }
 
     .card-disabled { opacity: 0.55; pointer-events: none; }
@@ -256,13 +270,11 @@ interface CampoFaltante {
     .plantilla-nombre  { font-size: 13px; font-weight: 500; color: #1E3A5F; }
     .plantilla-archivo { font-size: 11px; color: #9BA8B5; }
 
-    .info-card {
-      display: flex; gap: 12px;
-      background: #E6F1FB; border-color: #B5D4F4;
-    }
+    .info-card { display: flex; gap: 12px; background: #E6F1FB; border-color: #B5D4F4; }
     .info-card mat-icon { color: #185FA5; flex-shrink: 0; margin-top: 2px; }
     .info-card p   { margin: 0 0 6px; font-size: 13px; color: #1E3A5F; }
-    .info-card .hint { font-size: 12px; color: #5F6B7A; margin: 0; }
+    .info-card ul  { margin: 0; padding-left: 20px; font-size: 12px; color: #5F6B7A; }
+    .info-card li  { margin-bottom: 4px; }
 
     .form-actions { display: flex; justify-content: flex-end; gap: 8px; }
 
@@ -274,17 +286,19 @@ interface CampoFaltante {
   `],
 })
 export class IniciarContratacionComponent implements OnInit {
-  private ofertasSvc       = inject(OfertasService);
-  private participacionSvc = inject(ParticipacionesService);
-  private candidatosSvc    = inject(CandidatosService);
-  private solicitudesSvc   = inject(SolicitudesService);
-  private plantillasSvc    = inject(PlantillasDocumentoService);
-  private notif            = inject(NotificacionService);
-  private router           = inject(Router);
-  private route            = inject(ActivatedRoute);
+  private ofertasSvc        = inject(OfertasService);
+  private participacionSvc  = inject(ParticipacionesService);
+  private candidatosSvc     = inject(CandidatosService);
+  private solicitudesSvc    = inject(SolicitudesService);
+  private plantillasSvc     = inject(PlantillasDocumentoService);
+  private contratacionesSvc = inject(ContratacionesService);
+  private notif             = inject(NotificacionService);
+  private router            = inject(Router);
+  private route             = inject(ActivatedRoute);
 
-  cargando          = signal(true);
-  cargandoPlantillas = signal(true);
+  cargando            = signal(true);
+  cargandoPlantillas  = signal(true);
+  enviando            = signal(false);
 
   oferta        = signal<OfertaItem | null>(null);
   participacion = signal<ParticipacionItem | null>(null);
@@ -292,13 +306,14 @@ export class IniciarContratacionComponent implements OnInit {
   solicitud     = signal<SolicitudItem | null>(null);
   plantillas    = signal<PlantillaDocumentoItem[]>([]);
 
-  plantillasSeleccionadas = signal<Set<number>>(new Set());
+  contratacionExistente = signal<ContratacionItem | null>(null);
 
-  // Computa qué campos requeridos faltan en el candidato actual
+  plantillasSeleccionadas = signal<Set<number>>(new Set());
+  notas = '';
+
   camposFaltantes = computed<CampoFaltante[]>(() => {
     const c = this.candidato();
     if (!c) return [];
-
     return CAMPOS_REQUERIDOS
       .filter(({ campo }) => {
         const valor = c[campo];
@@ -319,44 +334,63 @@ export class IniciarContratacionComponent implements OnInit {
           return;
         }
 
-        const participacionId = oferta.ID_Participacion?.Id ?? oferta.ID_ParticipacionId;
-        if (!participacionId) {
-          this.cargando.set(false);
-          return;
-        }
+        // Verifica primero si ya existe un proceso de contratación —
+        // evita iniciar dos veces el mismo proceso
+        this.contratacionesSvc.existeContratacion(oferta.Id).subscribe({
+          next: existentes => {
+            if (existentes.length > 0) {
+              // Si ya existe, carga el registro completo para mostrar su estado
+              this.contratacionesSvc.getById(existentes[0].Id).subscribe({
+                next: c => { this.contratacionExistente.set(c); this.cargando.set(false); },
+                error: () => { this.cargando.set(false); },
+              });
+              return;
+            }
+            this.cargarDatosCompletos(oferta);
+          },
+          error: () => this.cargarDatosCompletos(oferta),
+        });
+      },
+      error: () => {
+        this.notif.error('Error al cargar la oferta');
+        this.cargando.set(false);
+      },
+    });
+  }
 
-        this.participacionSvc.getById(participacionId).subscribe({
-          next: participacion => {
-            this.participacion.set(participacion);
+  private cargarDatosCompletos(oferta: OfertaItem) {
+    const participacionId = oferta.ID_Participacion?.Id ?? oferta.ID_ParticipacionId;
+    if (!participacionId) {
+      this.cargando.set(false);
+      return;
+    }
 
-            forkJoin({
-              candidato: this.candidatosSvc.getById(
-                participacion.CandidatoId ?? participacion.Candidato?.Id!
-              ),
-              solicitud: this.solicitudesSvc.getById(
-                participacion.SolicitudId ?? participacion.Solicitud?.Id!
-              ),
-            }).subscribe({
-              next: ({ candidato, solicitud }) => {
-                this.candidato.set(candidato);
-                this.solicitud.set(solicitud);
-                this.cargando.set(false);
-                this.cargarPlantillas();
-              },
-              error: () => {
-                this.notif.error('Error al cargar datos relacionados');
-                this.cargando.set(false);
-              },
-            });
+    this.participacionSvc.getById(participacionId).subscribe({
+      next: participacion => {
+        this.participacion.set(participacion);
+
+        forkJoin({
+          candidato: this.candidatosSvc.getById(
+            participacion.CandidatoId ?? participacion.Candidato?.Id!
+          ),
+          solicitud: this.solicitudesSvc.getById(
+            participacion.SolicitudId ?? participacion.Solicitud?.Id!
+          ),
+        }).subscribe({
+          next: ({ candidato, solicitud }) => {
+            this.candidato.set(candidato);
+            this.solicitud.set(solicitud);
+            this.cargando.set(false);
+            this.cargarPlantillas();
           },
           error: () => {
-            this.notif.error('Error al cargar la participación');
+            this.notif.error('Error al cargar datos relacionados');
             this.cargando.set(false);
           },
         });
       },
       error: () => {
-        this.notif.error('Error al cargar la oferta');
+        this.notif.error('Error al cargar la participación');
         this.cargando.set(false);
       },
     });
@@ -387,6 +421,52 @@ export class IniciarContratacionComponent implements OnInit {
   irACompletarCandidato() {
     if (!this.candidato()) return;
     this.router.navigate(['/analista/candidatos', this.candidato()!.Id]);
+  }
+
+  etiquetaEstado(estado: string): string {
+    return {
+      Iniciado:               'Iniciado',
+      Generando_Documentos:   'Generando documentos',
+      Enviado_Firma:          'Enviado a firma',
+      Firmado_Aspirante:      'Firmado por el aspirante',
+      Completado:             'Completado',
+      Error:                  'Error en el proceso',
+    }[estado] ?? estado;
+  }
+
+  // Crea el registro en Contrataciones. Este es el disparador real hacia
+  // Power Automate — el flujo debe configurarse con disparador "se crea
+  // un elemento" sobre la lista Contrataciones.
+  iniciarProceso() {
+    if (this.camposFaltantes().length > 0) return;
+    if (!this.oferta()) return;
+
+    this.enviando.set(true);
+
+    const nombresSeleccionados = this.plantillas()
+      .filter(p => this.plantillasSeleccionadas().has(p.Id))
+      .map(p => p.Title);
+
+    this.contratacionesSvc.create({
+      ID_OfertaId:            this.oferta()!.Id,
+      DocumentosAdicionales:  nombresSeleccionados,
+      Estado_Contratacion:    'Iniciado',
+      Fecha_Inicio:           new Date().toISOString(),
+      Notas:                  this.notas ?? '',
+    }).subscribe({
+      next: (res) => {
+        this.notif.exito('Proceso de contratación iniciado. Recibirás notificaciones del avance.');
+        this.enviando.set(false);
+
+        const ofertaId = this.oferta()!.Id;
+        this.router.navigate(['/analista/ofertas', ofertaId]);
+      },
+      error: (err) => {
+        console.error('[IniciarContratacion] Error al crear registro en Contrataciones:', err);
+        this.notif.error('Error al iniciar el proceso de contratación. Intenta nuevamente.');
+        this.enviando.set(false);
+      },
+    });
   }
 
   volver() {
